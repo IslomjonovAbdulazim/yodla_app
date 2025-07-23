@@ -34,3 +34,4 @@ void main() async {
 
   runApp(DevicePreview(builder: (context) => const VocabularyApp()));
 }
+
