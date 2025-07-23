@@ -130,43 +130,11 @@ enum VoiceAgentTopic {
   }
 }
 
-/// App Routes
-class AppRoutes {
-  static const String splash = '/splash';
-  static const String login = '/login';
-  static const String home = '/home';
-  static const String dashboard = '/dashboard';
-
-  // Folders
-  static const String folders = '/folders';
-  static const String folderDetail = '/folder-detail';
-  static const String createFolder = '/create-folder';
-
-  // Words
-  static const String addWord = '/add-word';
-  static const String wordDetail = '/word-detail';
-  static const String ocrCamera = '/ocr-camera';
-  static const String ocrResults = '/ocr-results';
-
-  // Quiz
-  static const String quizHome = '/quiz-home';
-  static const String quizPlay = '/quiz-play';
-  static const String quizResults = '/quiz-results';
-
-  // Voice
-  static const String voiceAgents = '/voice-agents';
-  static const String voiceChat = '/voice-chat';
-
-  // Profile
-  static const String profile = '/profile';
-  static const String settings = '/settings';
-}
-
 /// Regular Expressions for Validation
 class AppRegex {
   static final RegExp email = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
-  static final RegExp englishWord = RegExp(r'^[a-zA-Z\s\-\']+$');
-  static final RegExp englishText = RegExp(r'^[a-zA-Z0-9\s\.\,\!\?\-\']+$');
+  static final RegExp englishWord = RegExp(r"^[a-zA-Z\s\-']+$");
+  static final RegExp englishText = RegExp(r"^[a-zA-Z0-9\s.,!?\\\-']+$");
 }
 
 /// Error Messages
