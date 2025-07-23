@@ -21,11 +21,11 @@ dependencies:
   image_picker:
   web_socket_channel:
   audio_session:
-  flutter_screenutil:
   cached_network_image:
   lottie:
   intl:
   permission_handler:
+  device_preview:
 
 dev_dependencies:
   flutter_test:

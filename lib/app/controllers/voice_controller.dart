@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 
 import '../models/api_response_model.dart';
 import '../models/voice_agent_model.dart';
+import '../routes/app_routes.dart';
 import '../services/voice_service.dart';
 import '../utils/app_colors.dart';
 import '../utils/constants.dart';
@@ -504,7 +505,7 @@ class VoiceController extends GetxController {
               ),
             ),
             Text(
-              'Select ${topic.value.capitalize()} Agent',
+              'Select ${GetUtils.capitalize(topic.value)} Agent',
               style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -557,7 +558,7 @@ class VoiceController extends GetxController {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Topic: ${stats.topic.capitalize()}'),
+            Text('Topic: ${GetUtils.capitalize(stats.topic)}'),
             Text('Duration: ${stats.formattedDuration}'),
             Text('Messages: ${_messages.length}'),
             Text('Started: ${AppHelpers.formatDateTime(stats.startedAtDateTime)}'),
@@ -722,7 +723,7 @@ class VoiceController extends GetxController {
 
   /// Get current agent topic
   String get currentAgentTopic {
-    return _currentSession.value?.agent.topic.capitalize() ?? '';
+    return GetUtils.capitalize(_currentSession.value?.agent.topic ?? '') ?? '';
   }
 
   /// Refresh voice agents
@@ -732,7 +733,7 @@ class VoiceController extends GetxController {
     AppHelpers.logUserAction('voice_agents_refreshed');
 
     if (_voiceAgents.isNotEmpty) {
-      AppHelpers.showSuccessSnackBar(
+      AppHelpers.showSuccessSnackbar(
         'Voice agents refreshed',
         title: 'Refreshed',
       );
