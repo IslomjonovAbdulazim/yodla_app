@@ -1,0 +1,39 @@
+name: yodla_app
+description: "A new Flutter project."
+
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.8.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  get:
+  dio:
+  retrofit:
+  get_storage:
+  sign_in_with_apple:
+  camera:
+  image_picker:
+  web_socket_channel:
+  audio_session:
+  flutter_screenutil:
+  cached_network_image:
+  lottie:
+  intl:
+  permission_handler:
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints:
+  retrofit_generator:
+  build_runner:
+
+flutter:
+
+  uses-material-design: true
