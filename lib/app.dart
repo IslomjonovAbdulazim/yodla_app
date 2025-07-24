@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:yodla_app/app/bindings/splash_binding.dart';
 
 import 'app/routes/app_pages.dart';
 import 'app/utils/app_colors.dart';
@@ -13,6 +14,7 @@ class VocabularyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return GetMaterialApp(
       title: AppConstants.appName,
+      initialBinding: SplashBinding(),
       debugShowCheckedModeBanner: false,
 
       // Theme Configuration

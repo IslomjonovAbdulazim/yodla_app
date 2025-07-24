@@ -1,9 +1,9 @@
 import 'package:get/get.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'package:yodla_app/app/routes/app_routes.dart';
 
 import '../models/api_response_model.dart';
 import '../models/user_model.dart';
-import '../routes/app_routes.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import 'api_service.dart';
@@ -20,7 +20,7 @@ class AuthService extends GetxService {
     _storageService = Get.find<StorageService>();
   }
 
-  /// Sign in with Apple
+  /// Sign in with Apple - Direct backend authentication only
   Future<ApiResponse<AuthResponse>> signInWithApple({String? nickname}) async {
     try {
       // Check if Sign in with Apple is available
@@ -30,6 +30,8 @@ class AuthService extends GetxService {
         );
       }
 
+      AppHelpers.logUserAction('apple_signin_attempt_started');
+
       // Request Apple credentials
       final credential = await SignInWithApple.getAppleIDCredential(
         scopes: [
@@ -37,6 +39,13 @@ class AuthService extends GetxService {
           AppleIDAuthorizationScopes.fullName,
         ],
       );
+
+      AppHelpers.logUserAction('apple_credential_received', {
+        'has_identity_token': credential.identityToken != null,
+        'has_email': credential.email != null,
+        'has_given_name': credential.givenName != null,
+        'user_identifier': credential.userIdentifier,
+      });
 
       // Validate required fields
       if (credential.identityToken == null) {
@@ -47,12 +56,23 @@ class AuthService extends GetxService {
 
       // Extract nickname from Apple response if not provided
       String? finalNickname = nickname;
-      if (finalNickname == null && credential.givenName != null) {
-        final givenName = credential.givenName ?? '';
-        final familyName = credential.familyName ?? '';
-        finalNickname = '$givenName $familyName'.trim();
-        if (finalNickname.isEmpty) {
-          finalNickname = null;
+      if (finalNickname == null) {
+        if (credential.givenName != null && credential.givenName!.isNotEmpty) {
+          final givenName = credential.givenName ?? '';
+          final familyName = credential.familyName ?? '';
+          finalNickname = '$givenName $familyName'.trim();
+          if (finalNickname.isEmpty) {
+            finalNickname = null;
+          }
+        }
+
+        // Fallback to email or user identifier
+        if (finalNickname == null) {
+          if (credential.email != null) {
+            finalNickname = credential.email!.split('@')[0];
+          } else {
+            finalNickname = credential.userIdentifier ?? 'Apple User';
+          }
         }
       }
 
@@ -62,6 +82,12 @@ class AuthService extends GetxService {
         userIdentifier: credential.userIdentifier ?? 'unknown_user',
         nickname: finalNickname,
       );
+
+      AppHelpers.logUserAction('sending_to_backend', {
+        'user_identifier': credential.userIdentifier,
+        'has_nickname': finalNickname != null,
+        'nickname': finalNickname,
+      });
 
       // Send to backend
       final response = await _apiService.post<AuthResponse>(
@@ -81,29 +107,17 @@ class AuthService extends GetxService {
           'user_id': response.data!.user.id,
           'email': response.data!.user.email,
         });
+      } else {
+        AppHelpers.logUserAction('apple_backend_auth_failed', {
+          'error': response.error,
+          'status_code': response.statusCode,
+        });
       }
 
       return response;
+
     } on SignInWithAppleAuthorizationException catch (e) {
-      String errorMessage;
-      switch (e.code) {
-        case AuthorizationErrorCode.canceled:
-          errorMessage = 'Sign in was cancelled';
-          break;
-        case AuthorizationErrorCode.failed:
-          errorMessage = 'Sign in failed';
-          break;
-        case AuthorizationErrorCode.invalidResponse:
-          errorMessage = 'Invalid response from Apple';
-          break;
-        case AuthorizationErrorCode.notHandled:
-          errorMessage = 'Sign in not handled';
-          break;
-        case AuthorizationErrorCode.unknown:
-        default:
-          errorMessage = 'Unknown error occurred during sign in';
-          break;
-      }
+      final errorMessage = _handleAppleAuthError(e);
 
       AppHelpers.logUserAction('apple_sign_in_error', {
         'error_code': e.code.toString(),
@@ -112,7 +126,7 @@ class AuthService extends GetxService {
 
       return ApiResponse.error(error: errorMessage);
     } catch (e) {
-      AppHelpers.logUserAction('apple_sign_in_error', {
+      AppHelpers.logUserAction('apple_sign_in_unexpected_error', {
         'error': e.toString(),
       });
 
@@ -122,71 +136,38 @@ class AuthService extends GetxService {
     }
   }
 
-  /// Test login for development
-  Future<ApiResponse<AuthResponse>> testLogin({
-    required String email,
-    String nickname = 'Test User',
-  }) async {
-    try {
-      // Only allow in debug mode
-      if (!AppConstants.baseUrl.contains('localhost') &&
-          !AppConstants.baseUrl.contains('railway.app')) {
-        return ApiResponse.error(
-          error: 'Test login is only available in development mode',
-        );
-      }
-
-      final request = TestLoginRequest(
-        email: email,
-        nickname: nickname,
-      );
-
-      final response = await _apiService.post<AuthResponse>(
-        ApiEndpoints.testLogin,
-        data: request.toJson(),
-        fromJson: (json) => AuthResponse.fromJson(json),
-      );
-
-      if (response.success && response.data != null) {
-        // Store token and user data
-        await _storeAuthData(response.data!);
-
-        // Set API token
-        _apiService.setAuthToken(response.data!.accessToken);
-
-        AppHelpers.logUserAction('test_login_success', {
-          'user_id': response.data!.user.id,
-          'email': response.data!.user.email,
-        });
-      }
-
-      return response;
-    } catch (e) {
-      AppHelpers.logUserAction('test_login_error', {
-        'error': e.toString(),
-      });
-
-      return ApiResponse.error(
-        error: 'Test login failed: ${e.toString()}',
-      );
+  /// Handle Apple authorization errors
+  String _handleAppleAuthError(SignInWithAppleAuthorizationException e) {
+    switch (e.code) {
+      case AuthorizationErrorCode.canceled:
+        return 'Sign in was cancelled';
+      case AuthorizationErrorCode.failed:
+        return 'Sign in failed';
+      case AuthorizationErrorCode.invalidResponse:
+        return 'Invalid response from Apple';
+      case AuthorizationErrorCode.notHandled:
+        return 'Sign in not handled';
+      case AuthorizationErrorCode.unknown:
+      default:
+        return 'Unknown error occurred during sign in';
     }
   }
 
   /// Logout user
   Future<void> logout() async {
     try {
+      AppHelpers.logUserAction('logout_started');
+
       // Clear API token
       _apiService.clearAuthToken();
 
       // Clear stored data
       _storageService.logout();
 
-      // Log action
-      AppHelpers.logUserAction('logout');
-
       // Navigate to login
       Get.offAllNamed(AppRoutes.login);
 
+      AppHelpers.logUserAction('logout_completed');
       AppHelpers.showSuccessSnackbar('Logged out successfully');
     } catch (e) {
       AppHelpers.logUserAction('logout_error', {
@@ -209,6 +190,10 @@ class AuthService extends GetxService {
       try {
         return User.fromJson(userData);
       } catch (e) {
+        AppHelpers.logUserAction('invalid_user_data_cleared', {
+          'error': e.toString(),
+        });
+
         // Invalid user data, clear it
         _storageService.removeUserData();
         return null;
@@ -261,6 +246,7 @@ class AuthService extends GetxService {
   Future<bool> validateSession() async {
     try {
       if (!isLoggedIn) {
+        AppHelpers.logUserAction('session_validation_no_login');
         return false;
       }
 
@@ -275,12 +261,21 @@ class AuthService extends GetxService {
         if (response.data != null) {
           _storageService.setUserData(response.data!.user.toJson());
         }
+
+        AppHelpers.logUserAction('session_validation_success');
         return true;
       } else {
-        // Session invalid, logout
+        // Session invalid, logout if unauthorized
         if (response.statusCode == 401) {
+          AppHelpers.logUserAction('session_expired_logging_out');
           await logout();
         }
+
+        AppHelpers.logUserAction('session_validation_failed', {
+          'status_code': response.statusCode,
+          'error': response.error,
+        });
+
         return false;
       }
     } catch (e) {
@@ -352,7 +347,7 @@ class AuthService extends GetxService {
     }
   }
 
-  /// Initialize auth service (check existing session)
+  /// Initialize auth service
   Future<void> initializeAuth() async {
     try {
       if (isLoggedIn) {
@@ -363,12 +358,18 @@ class AuthService extends GetxService {
         }
 
         // Validate session in background
-        validateSession();
+        validateSession().then((isValid) {
+          AppHelpers.logUserAction('background_session_validation', {
+            'is_valid': isValid,
+          });
+        });
 
         AppHelpers.logUserAction('auth_initialized', {
           'has_token': token != null,
           'has_user_data': _storageService.hasUserData(),
         });
+      } else {
+        AppHelpers.logUserAction('auth_initialized_no_session');
       }
     } catch (e) {
       AppHelpers.logUserAction('auth_init_error', {
@@ -443,15 +444,12 @@ class AuthService extends GetxService {
     }
   }
 
-  /// Delete account (for future implementation)
+  /// Delete account
   Future<ApiResponse<bool>> deleteAccount() async {
     try {
-      // This would typically call a delete account endpoint
-      // For now, just logout
       await logout();
 
       AppHelpers.logUserAction('account_deleted');
-
       return ApiResponse.success(data: true);
     } catch (e) {
       AppHelpers.logUserAction('delete_account_error', {
@@ -464,10 +462,9 @@ class AuthService extends GetxService {
     }
   }
 
-  /// Export user data (for GDPR compliance)
+  /// Export user data
   Future<ApiResponse<Map<String, dynamic>>> exportUserData() async {
     try {
-      // This would typically call an export endpoint
       final userData = _storageService.getUserData();
 
       if (userData != null) {
@@ -485,49 +482,5 @@ class AuthService extends GetxService {
         error: 'Failed to export user data: ${e.toString()}',
       );
     }
-  }
-}
-
-/// Authentication status enum
-enum AuthStatus {
-  unknown,
-  authenticated,
-  unauthenticated,
-  loading,
-  error,
-}
-
-/// Authentication result
-class AuthResult {
-  final bool success;
-  final String? error;
-  final User? user;
-  final String? token;
-
-  AuthResult({
-    required this.success,
-    this.error,
-    this.user,
-    this.token,
-  });
-
-  factory AuthResult.success({required User user, required String token}) {
-    return AuthResult(
-      success: true,
-      user: user,
-      token: token,
-    );
-  }
-
-  factory AuthResult.failure(String error) {
-    return AuthResult(
-      success: false,
-      error: error,
-    );
-  }
-
-  @override
-  String toString() {
-    return 'AuthResult{success: $success, error: $error, user: $user, token: ${token?.substring(0, 10)}...}';
   }
 }

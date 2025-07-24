@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:yodla_app/app/bindings/splash_binding.dart';
 
 import '../bindings/auth_binding.dart';
 import '../bindings/home_binding.dart';
@@ -31,14 +32,14 @@ import 'app_routes.dart';
 class AppPages {
   AppPages._();
 
-  static const String initial = AppRoutes.login;
+  static const String initial = AppRoutes.splash;
 
   static final List<GetPage> routes = [
     // Authentication routes
     GetPage(
       name: AppRoutes.splash,
       page: () => const SplashView(),
-      binding: AuthBinding(),
+      binding: SplashBinding(),
       transition: Transition.fade,
       transitionDuration: const Duration(milliseconds: 300),
     ),

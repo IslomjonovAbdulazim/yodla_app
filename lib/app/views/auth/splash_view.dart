@@ -1,172 +1,98 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:lottie/lottie.dart';
 
-import '../../controllers/auth_controller.dart';
+import '../../routes/app_routes.dart';
 import '../../services/auth_service.dart';
 import '../../utils/app_colors.dart';
-import '../../utils/constants.dart';
 
-class SplashView extends GetView<AuthController> {
+class SplashView extends StatefulWidget {
   const SplashView({super.key});
+
+  @override
+  State<SplashView> createState() => _SplashViewState();
+}
+
+class _SplashViewState extends State<SplashView> {
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAuth();
+  }
+
+  void _checkAuth() async {
+    // Wait 2 seconds for splash effect
+    await Future.delayed(Duration(seconds: 2));
+
+    try {
+      final authService = Get.find<AuthService>();
+
+      // Initialize auth service first
+      await authService.initializeAuth();
+
+      final token = authService.currentToken;
+      final user = authService.currentUser;
+
+      print('🔑 Token: $token');
+      print('👤 User: ${user?.email}');
+      print('🔍 isLoggedIn: ${authService.isLoggedIn}');
+
+      // Simple check: if we have both token and user data
+      if (token != null && user != null) {
+        print('✅ Going to home');
+        Get.offAllNamed(AppRoutes.home);
+      } else {
+        print('❌ Going to login');
+        Get.offAllNamed(AppRoutes.login);
+      }
+    } catch (e) {
+      print('💥 Error: $e');
+      Get.offAllNamed(AppRoutes.login);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.primary,
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppColors.primary,
-              AppColors.primaryDark,
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // App Logo/Icon
-              Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(30),
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.2),
-                    width: 2,
-                  ),
-                ),
-                child: Icon(
-                  Icons.school_rounded,
-                  size: 60,
-                  color: Colors.white,
-                ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Logo
+            Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(30),
               ),
-
-              SizedBox(height: 32),
-
-              // App Name
-              Text(
-                'VocabMaster',
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  letterSpacing: 1.2,
-                ),
+              child: Icon(
+                Icons.school_rounded,
+                size: 60,
+                color: Colors.white,
               ),
+            ),
 
-              SizedBox(height: 8),
+            SizedBox(height: 32),
 
-              // App Tagline
-              Text(
-                'Learn English with AI',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.white.withOpacity(0.8),
-                  fontWeight: FontWeight.w300,
-                ),
+            // App Name
+            Text(
+              'VocabMaster',
+              style: TextStyle(
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
               ),
+            ),
 
-              SizedBox(height: 80),
+            SizedBox(height: 60),
 
-              // Loading Animation
-              Obx(() {
-                if (controller.authStatus == AuthStatus.loading) {
-                  return Column(
-                    children: [
-                      // Custom loading animation
-                      SizedBox(
-                        width: 60,
-                        height: 60,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 3,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white.withOpacity(0.8),
-                          ),
-                        ),
-                      ),
-
-                      SizedBox(height: 24),
-
-                      Text(
-                        'Loading your vocabulary...',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.white.withOpacity(0.7),
-                        ),
-                      ),
-                    ],
-                  );
-                }
-
-                if (controller.authStatus == AuthStatus.error) {
-                  return Column(
-                    children: [
-                      Icon(
-                        Icons.error_outline,
-                        size: 48,
-                        color: Colors.white.withOpacity(0.8),
-                      ),
-
-                      SizedBox(height: 16),
-
-                      Text(
-                        'Something went wrong',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.white.withOpacity(0.7),
-                        ),
-                      ),
-
-                      SizedBox(height: 16),
-
-                      ElevatedButton(
-                        onPressed: () => Get.offAllNamed('/login'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white.withOpacity(0.2),
-                          foregroundColor: Colors.white,
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 12,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(25),
-                          ),
-                        ),
-                        child: Text(
-                          'Retry',
-                          style: TextStyle(fontSize: 14),
-                        ),
-                      ),
-                    ],
-                  );
-                }
-
-                return const SizedBox.shrink();
-              }),
-
-              const Spacer(),
-
-              // Version info
-              Text(
-                'Version 1.0.0',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.white.withOpacity(0.5),
-                ),
-              ),
-
-              SizedBox(height: 24),
-            ],
-          ),
+            // Loading
+            CircularProgressIndicator(
+              color: Colors.white,
+            ),
+          ],
         ),
       ),
     );

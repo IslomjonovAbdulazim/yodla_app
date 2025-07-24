@@ -4,7 +4,7 @@ class AppConstants {
   static const String appVersion = '1.0.0';
 
   // API Configuration
-  static const String baseUrl = 'https://your-api.railway.app'; // TODO: Replace with your actual API URL
+  static const String baseUrl = 'https://conversationaibackend-production.up.railway.app'; // TODO: Replace with your actual API URL
   static const String apiVersion = 'v1';
   static const Duration connectTimeout = Duration(seconds: 30);
   static const Duration receiveTimeout = Duration(seconds: 30);

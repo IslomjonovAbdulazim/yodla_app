@@ -84,7 +84,6 @@ class AuthController extends GetxController {
       _authStatus.value = AuthStatus.error;
       AppHelpers.logUserAction('auth_initialization_failed', {
         'error': e.toString(),
-        'stack_trace': e.toString(),
       });
       _showError('Failed to initialize authentication');
     }
@@ -167,10 +166,6 @@ class AuthController extends GetxController {
 
       _currentUser.value = null;
       _authStatus.value = AuthStatus.unauthenticated;
-
-      AppHelpers.logUserAction('user_state_cleared');
-      AppHelpers.logUserAction('navigating_to_login_after_logout');
-      Get.offAllNamed(AppRoutes.login);
 
       AppHelpers.logUserAction('logout_success');
     } catch (e) {
@@ -284,4 +279,13 @@ class AuthController extends GetxController {
       title: 'Authentication Error',
     );
   }
+}
+
+/// Authentication status enum
+enum AuthStatus {
+  unknown,
+  authenticated,
+  unauthenticated,
+  loading,
+  error,
 }
