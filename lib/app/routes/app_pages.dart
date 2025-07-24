@@ -1,3 +1,4 @@
+// lib/app/routes/app_pages.dart
 import 'package:get/get.dart';
 import 'package:yodla_app/app/bindings/splash_binding.dart';
 
@@ -8,24 +9,11 @@ import '../bindings/word_binding.dart';
 import '../bindings/quiz_binding.dart';
 import '../bindings/voice_binding.dart';
 
-import '../views/auth/splash_view.dart';
-import '../views/auth/login_view.dart';
-import '../views/home/home_view.dart';
-import '../views/home/dashboard_view.dart';
-import '../views/folders/folders_view.dart';
-import '../views/folders/folder_detail_view.dart';
-import '../views/folders/create_folder_view.dart';
-import '../views/words/add_word_view.dart';
-import '../views/words/word_detail_view.dart';
-import '../views/words/ocr_camera_view.dart';
-import '../views/words/ocr_results_view.dart';
-import '../views/quiz/quiz_home_view.dart';
-import '../views/quiz/quiz_play_view.dart';
-import '../views/quiz/quiz_results_view.dart';
-import '../views/voice/voice_agents_view.dart';
-import '../views/voice/voice_chat_view.dart';
-import '../views/profile/profile_view.dart';
-import '../views/profile/settings_view.dart';
+import '../views/home_view.dart';
+import '../views/splash_view.dart';
+import '../views/login_view.dart';
+import '../views/voice_agents_view.dart';
+import '../views/voice_chat_view.dart';
 
 import 'app_routes.dart';
 
@@ -59,6 +47,24 @@ class AppPages {
       transition: Transition.fadeIn,
       transitionDuration: const Duration(milliseconds: 300),
     ),
+
+    // Voice routes - NOW ENABLED
+    GetPage(
+      name: AppRoutes.voiceAgents,
+      page: () => const VoiceAgentsView(),
+      binding: VoiceBinding(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+    ),
+    GetPage(
+      name: AppRoutes.voiceChat,
+      page: () => const VoiceChatView(),
+      binding: VoiceBinding(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+    ),
+
+    // Dashboard route (can be enabled later)
     // GetPage(
     //   name: AppRoutes.dashboard,
     //   page: () => const DashboardView(),
@@ -66,8 +72,10 @@ class AppPages {
     //   transition: Transition.rightToLeft,
     //   transitionDuration: const Duration(milliseconds: 300),
     // ),
-    //
-    // // Folder routes
+
+    // Other routes can be uncommented as needed...
+
+    // Folder routes
     // GetPage(
     //   name: AppRoutes.folders,
     //   page: () => const FoldersView(),
@@ -89,8 +97,8 @@ class AppPages {
     //   transition: Transition.downToUp,
     //   transitionDuration: const Duration(milliseconds: 300),
     // ),
-    //
-    // // Word routes
+
+    // Word routes
     // GetPage(
     //   name: AppRoutes.addWord,
     //   page: () => const AddWordView(),
@@ -119,8 +127,8 @@ class AppPages {
     //   transition: Transition.rightToLeft,
     //   transitionDuration: const Duration(milliseconds: 300),
     // ),
-    //
-    // // Quiz routes
+
+    // Quiz routes
     // GetPage(
     //   name: AppRoutes.quizHome,
     //   page: () => const QuizHomeView(),
@@ -142,24 +150,8 @@ class AppPages {
     //   transition: Transition.rightToLeft,
     //   transitionDuration: const Duration(milliseconds: 300),
     // ),
-    //
-    // // Voice routes
-    // GetPage(
-    //   name: AppRoutes.voiceAgents,
-    //   page: () => const VoiceAgentsView(),
-    //   binding: VoiceBinding(),
-    //   transition: Transition.rightToLeft,
-    //   transitionDuration: const Duration(milliseconds: 300),
-    // ),
-    // GetPage(
-    //   name: AppRoutes.voiceChat,
-    //   page: () => const VoiceChatView(),
-    //   binding: VoiceBinding(),
-    //   transition: Transition.rightToLeft,
-    //   transitionDuration: const Duration(milliseconds: 300),
-    // ),
-    //
-    // // Profile routes
+
+    // Profile routes
     // GetPage(
     //   name: AppRoutes.profile,
     //   page: () => const ProfileView(),

@@ -46,7 +46,7 @@ class AuthController extends GetxController {
       _authStatus.value = AuthStatus.loading;
 
       // Check Apple Sign In availability
-      _isAppleSignInAvailable.value = await _authService.isAppleSignInAvailable();
+      _isAppleSignInAvailable.value = true;
       AppHelpers.logUserAction('apple_signin_availability_checked', {
         'available': _isAppleSignInAvailable.value,
       });
@@ -180,71 +180,6 @@ class AuthController extends GetxController {
     }
   }
 
-  /// Validate current session
-  Future<bool> validateSession() async {
-    try {
-      AppHelpers.logUserAction('session_validation_started');
-
-      final isValid = await _authService.validateSession();
-
-      AppHelpers.logUserAction('session_validation_result', {
-        'is_valid': isValid,
-        'current_user_exists': _currentUser.value != null,
-      });
-
-      if (!isValid) {
-        AppHelpers.logUserAction('invalid_session_detected_clearing_state');
-        _currentUser.value = null;
-        _authStatus.value = AuthStatus.unauthenticated;
-      }
-
-      return isValid;
-    } catch (e) {
-      AppHelpers.logUserAction('session_validation_exception', {
-        'error': e.toString(),
-        'error_type': e.runtimeType.toString(),
-      });
-      return false;
-    }
-  }
-
-  /// Refresh user data
-  Future<void> refreshUserData() async {
-    try {
-      AppHelpers.logUserAction('refresh_user_data_started', {
-        'current_user_id': _currentUser.value?.id,
-      });
-
-      final response = await _authService.refreshUserData();
-
-      AppHelpers.logUserAction('refresh_user_data_response', {
-        'success': response.success,
-        'status_code': response.statusCode,
-        'has_data': response.data != null,
-      });
-
-      if (response.success && response.data != null) {
-        _currentUser.value = response.data!;
-        AppHelpers.logUserAction('user_data_refreshed_successfully', {
-          'user_id': response.data!.id,
-        });
-      } else if (response.statusCode == 401) {
-        // Session expired, logout
-        AppHelpers.logUserAction('session_expired_during_refresh_logging_out');
-        await logout();
-      } else {
-        AppHelpers.logUserAction('refresh_user_data_failed', {
-          'error': response.error,
-          'status_code': response.statusCode,
-        });
-      }
-    } catch (e) {
-      AppHelpers.logUserAction('refresh_user_data_exception', {
-        'error': e.toString(),
-        'error_type': e.runtimeType.toString(),
-      });
-    }
-  }
 
   /// Handle authentication required scenarios
   void handleAuthRequired() {

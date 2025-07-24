@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -542,8 +543,72 @@ class VoiceService extends GetxService {
   }
 
   /// Request microphone permission
+  /// Request microphone permission
+  /// Request microphone permission
   Future<bool> _requestMicrophonePermission() async {
     try {
+      // First check current permission status
+      final currentStatus = await Permission.microphone.status;
+
+      AppHelpers.logUserAction('microphone_permission_check', {
+        'current_status': currentStatus.toString(),
+      });
+
+      // If already granted, return true
+      if (currentStatus.isGranted) {
+        return true;
+      }
+
+      // If permanently denied, show settings dialog
+      if (currentStatus.isPermanentlyDenied) {
+        final shouldOpenSettings = await _showPermissionDialog(
+          title: 'Microphone Access Required',
+          message: 'To use voice conversations, please enable microphone access in your device settings.\n\nGo to Settings > Privacy & Security > Microphone > Yodla App',
+          confirmText: 'Open Settings',
+          cancelText: 'Cancel',
+          isSettingsDialog: true,
+        );
+
+        if (shouldOpenSettings) {
+          await openAppSettings();
+
+          // Wait for user to come back and check again
+          await Future.delayed(const Duration(milliseconds: 1000));
+          final newStatus = await Permission.microphone.status;
+
+          AppHelpers.logUserAction('permission_recheck_after_settings', {
+            'status': newStatus.toString(),
+          });
+
+          if (newStatus.isGranted) {
+            AppHelpers.showSuccessSnackbar('Microphone access enabled!');
+            return true;
+          } else {
+            AppHelpers.showWarningSnackbar(
+                'Microphone access is still disabled. Voice conversations won\'t work without it.',
+                title: 'Permission Still Disabled'
+            );
+            return false;
+          }
+        }
+
+        return false;
+      }
+
+      // Show explanation dialog first
+      final shouldRequestPermission = await _showPermissionDialog(
+        title: 'Enable Voice Conversations',
+        message: 'Yodla needs access to your microphone to enable voice conversations with AI agents.\n\nYour voice data is processed securely and never stored without your consent.',
+        confirmText: 'Allow Access',
+        cancelText: 'Not Now',
+        isSettingsDialog: false,
+      );
+
+      if (!shouldRequestPermission) {
+        return false;
+      }
+
+      // Now request the actual permission
       final status = await Permission.microphone.request();
 
       AppHelpers.logUserAction('microphone_permission_requested', {
@@ -551,31 +616,129 @@ class VoiceService extends GetxService {
       });
 
       if (status.isGranted) {
+        AppHelpers.showSuccessSnackbar('Microphone access granted!');
         return true;
       } else if (status.isPermanentlyDenied) {
-        AppHelpers.showErrorSnackbar(
-          'Microphone permission is required for voice conversations. Please enable it in Settings.',
-          title: 'Permission Required',
+        AppHelpers.showWarningSnackbar(
+            'Microphone access was denied. You can enable it later in Settings if you change your mind.',
+            title: 'Permission Denied'
         );
-        await openAppSettings();
+        return false;
       } else {
-        AppHelpers.showErrorSnackbar(
-          'Microphone permission is required for voice conversations.',
-          title: 'Permission Denied',
+        // Denied but not permanently
+        AppHelpers.showWarningSnackbar(
+            'Microphone access is required for voice conversations.',
+            title: 'Permission Needed'
         );
+        return false;
       }
 
-      return false;
     } catch (e) {
       AppHelpers.logUserAction('microphone_permission_error', {
         'error': e.toString(),
       });
 
       AppHelpers.showErrorSnackbar(
-        'Failed to request microphone permission',
+        'Failed to request microphone permission: ${e.toString()}',
         title: 'Permission Error',
       );
 
+      return false;
+    }
+  }
+
+  /// Show permission explanation dialog
+  Future<bool> _showPermissionDialog({
+    required String title,
+    required String message,
+    required String confirmText,
+    required String cancelText,
+    required bool isSettingsDialog,
+  }) async {
+    final result = await Get.dialog<bool>(
+      AlertDialog(
+        title: Row(
+          children: [
+            Icon(
+              isSettingsDialog ? Icons.settings : Icons.mic,
+              color: Get.theme.primaryColor,
+              size: 24,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          message,
+          style: const TextStyle(
+            fontSize: 16,
+            height: 1.5,
+          ),
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+            child: Text(
+              cancelText,
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Get.back(result: true),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: Text(
+              confirmText,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+      barrierDismissible: false,
+    );
+
+    return result ?? false;
+  }
+
+  /// Check if microphone permission is available in device settings
+  Future<bool> _isMicrophonePermissionAvailable() async {
+    try {
+      // Check if the permission is properly configured
+      final status = await Permission.microphone.status;
+
+      // If it's undetermined, it means the permission is properly set up
+      // If it's permanently denied, it should still appear in settings
+      return status != PermissionStatus.restricted;
+    } catch (e) {
+      AppHelpers.logUserAction('check_microphone_availability_error', {
+        'error': e.toString(),
+      });
       return false;
     }
   }

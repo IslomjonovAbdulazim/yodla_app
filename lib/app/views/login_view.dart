@@ -10,7 +10,7 @@ import 'package:svg_flutter/svg_flutter.dart';
 import 'package:yodla_app/widgets/button.dart';
 import 'package:yodla_app/widgets/common_button_type.dart';
 
-import '../../controllers/auth_controller.dart';
+import '../controllers/auth_controller.dart';
 
 class LoginView extends GetView<AuthController> {
   LoginView({super.key});
@@ -205,27 +205,23 @@ class LoginView extends GetView<AuthController> {
                   ),
                   SizedBox(width: 10),
                   Expanded(
-                    child: Obx(() {
-                      return Button(
-                        type: CommonButtonType.primary,
-                        borderColor: Color(0xffACCEE3),
-                        buttonColor: Colors.white,
-                        onPressed: () {},
-                        child: SvgPicture.asset("assets/google.svg"),
-                      );
-                    }),
+                    child: Button(
+                      type: CommonButtonType.primary,
+                      borderColor: Color(0xffACCEE3),
+                      buttonColor: Colors.white,
+                      onPressed: () {},
+                      child: SvgPicture.asset("assets/google.svg"),
+                    ),
                   ),
                   SizedBox(width: 10),
                   Expanded(
-                    child: Obx(() {
-                      return Button(
-                        type: CommonButtonType.primary,
-                        borderColor: Color(0xffACCEE3),
-                        buttonColor: Colors.white,
-                        onPressed: () {},
-                        child: Icon(Icons.telegram),
-                      );
-                    }),
+                    child: Button(
+                      type: CommonButtonType.primary,
+                      borderColor: Color(0xffACCEE3),
+                      buttonColor: Colors.white,
+                      onPressed: () {},
+                      child: Icon(Icons.telegram),
+                    ),
                   ),
                 ],
               ),

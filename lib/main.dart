@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import 'app.dart';
-import 'app/controllers/auth_controller.dart';
 import 'app/services/storage_service.dart';
 
 void main() async {
@@ -16,7 +16,7 @@ void main() async {
 
   // Initialize storage service
   await Get.putAsync(() => StorageService().init());
-
+  print(await Permission.microphone.request());
 
   // Set system UI overlay style
   SystemChrome.setSystemUIOverlayStyle(
