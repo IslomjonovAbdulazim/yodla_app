@@ -24,6 +24,11 @@ class HomeController extends GetxController {
   bool get isRefreshing => _isRefreshing.value;
   Rx<UserStats?> get userStats => _userStats;
   List<Folder> get recentFolders => _recentFolders.toList();
+  RxInt selectedIndex = 0.obs;
+
+  void changeIndex(int index) {
+    selectedIndex.value = index;
+  }
 
   @override
   void onInit() {

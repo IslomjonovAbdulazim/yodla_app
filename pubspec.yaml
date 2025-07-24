@@ -26,6 +26,12 @@ dependencies:
   intl:
   permission_handler:
   device_preview:
+  google_fonts:
+  country_flags: ^3.3.0
+  mask_text_input_formatter: ^2.9.0
+  dotted_line: ^3.2.3
+  bottom_navy_bar: ^6.1.0
+  svg_flutter:
 
 dev_dependencies:
   flutter_test:
@@ -37,3 +43,6 @@ dev_dependencies:
 flutter:
 
   uses-material-design: true
+
+  assets:
+    - assets/

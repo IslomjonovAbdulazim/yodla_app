@@ -1,12 +1,24 @@
+import 'package:country_flags/country_flags.dart';
+import 'package:dotted_line/dotted_line.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'package:svg_flutter/svg_flutter.dart';
+import 'package:yodla_app/widgets/button.dart';
+import 'package:yodla_app/widgets/common_button_type.dart';
 
 import '../../controllers/auth_controller.dart';
-import '../../utils/app_colors.dart';
 
 class LoginView extends GetView<AuthController> {
-  const LoginView({super.key});
+  LoginView({super.key});
+
+  final mask = MaskTextInputFormatter(
+    mask: "(##) ###-##-##",
+    filter: {"#": RegExp(r"[0-9]")},
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -14,109 +26,243 @@ class LoginView extends GetView<AuthController> {
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(height: 60),
+              const SizedBox(height: 40),
 
-              // App Logo and Welcome
-              Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(25),
-                ),
-                child: Icon(
-                  Icons.school_rounded,
-                  size: 50,
-                  color: AppColors.primary,
+              // Help text
+              Align(
+                alignment: Alignment.centerRight,
+                child: Button.tertiary(
+                  padding: EdgeInsets.zero,
+                  child: Text(
+                    'Yordam kerakmi?',
+                    style: GoogleFonts.armata(
+                      fontSize: 16,
+                      color: Color(0xFF7AB2D3),
+                    ),
+                  ),
                 ),
               ),
 
-              SizedBox(height: 32),
-
+              SizedBox(height: 10),
+              // Title
               Text(
-                'Welcome to VocabMaster',
-                style: TextStyle(
-                  fontSize: 28,
+                'Kirish',
+                style: GoogleFonts.armata(
+                  fontSize: 32,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
+                  color: Colors.black,
                 ),
-                textAlign: TextAlign.center,
               ),
 
-              SizedBox(height: 12),
-
+              // Subtitle
+              SizedBox(height: 5),
               Text(
-                'Learn English vocabulary with AI-powered lessons and interactive quizzes',
-                style: TextStyle(
+                'Telefon raqamingizni kiriting',
+                style: GoogleFonts.armata(
                   fontSize: 16,
-                  color: AppColors.textSecondary,
-                  height: 1.4,
+                  color: Color(0xFF7AB2D3),
                 ),
-                textAlign: TextAlign.center,
               ),
 
-              SizedBox(height: 60),
+              const SizedBox(height: 30),
 
-              // Apple Sign In Button
-              Obx(() {
-                if (controller.isAppleSignInAvailable) {
-                  return Column(
-                    children: [
-                      SizedBox(
-                        width: double.infinity,
-                        height: 50,
-                        child: SignInWithAppleButton(
-                          onPressed: controller.isLoading
-                              ? null
-                              : () => controller.signInWithApple(),
-                          style: SignInWithAppleButtonStyle.black,
-                          borderRadius: BorderRadius.circular(25),
-                        ),
+              // Uzbekistan flag
+
+              // Phone input
+              SizedBox(
+                height: 60,
+                child: Row(
+                  children: [
+                    Container(
+                      height: 80,
+                      padding: EdgeInsets.symmetric(horizontal: 10),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        color: Color(0xffFAFAFA),
                       ),
-
-                      SizedBox(height: 24),
-
-                      Row(
+                      child: Row(
                         children: [
-                          const Expanded(child: Divider()),
-                          Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 16),
-                            child: Text(
-                              'or',
-                              style: TextStyle(
-                                color: AppColors.textSecondary,
-                                fontSize: 14,
-                              ),
+                          CountryFlag.fromCountryCode(
+                            "uz",
+                            shape: Circle(),
+                            height: 30,
+                            width: 30,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            '+998',
+                            style: GoogleFonts.armata(
+                              fontSize: 16,
+                              color: Colors.black,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
-                          const Expanded(child: Divider()),
                         ],
                       ),
-
-                      SizedBox(height: 24),
-                    ],
-                  );
-                }
-                return const SizedBox.shrink();
-              }),
-              Spacer(),
-
-              // Terms and Privacy
-              Text(
-                'By signing in, you agree to our Terms of Service and Privacy Policy',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: AppColors.textSecondary,
-                  height: 1.4,
+                    ),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: TextFormField(
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: Color(0xffFAFAFA),
+                          hintText: 'Telefon raqami',
+                          hintStyle: GoogleFonts.armata(
+                            color: Colors.grey.shade500,
+                            fontSize: 16,
+                          ),
+                          border: OutlineInputBorder(
+                            borderSide: BorderSide.none,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderSide: BorderSide.none,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        style: GoogleFonts.armata(
+                          fontSize: 16,
+                          color: Colors.black,
+                        ),
+                        keyboardType: TextInputType.phone,
+                        inputFormatters: [mask],
+                      ),
+                    ),
+                  ],
                 ),
-                textAlign: TextAlign.center,
               ),
 
-              SizedBox(height: 24),
+              const SizedBox(height: 32),
+
+              // Continue button
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: Button(
+                  type: CommonButtonType.primary,
+                  borderColor: Color(0xffACCEE3),
+                  buttonColor: Color(0xff7AB2D3),
+                  onPressed: () {
+                    // Just for show - doesn't work
+                  },
+                  child: Text(
+                    'Davom etish',
+                    style: GoogleFonts.armata(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 40),
+
+              // Or divider
+              Row(
+                children: [
+                  Expanded(
+                    child: DottedLine(dashColor: Color(0xffACCEE3)),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(
+                      'yoki',
+                      style: GoogleFonts.armata(
+                        fontSize: 14,
+                        color: Color(0xFF7AB2D3),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: DottedLine(dashColor: Color(0xffACCEE3)),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 32),
+
+              // Social buttons
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Expanded(
+                    child: Obx(() {
+                      return Button(
+                        type: CommonButtonType.primary,
+                        borderColor: Color(0xffACCEE3),
+                        buttonColor: Colors.white,
+                        onPressed: controller.isLoading
+                            ? null
+                            : () => controller.signInWithApple(),
+                        child: SvgPicture.asset("assets/apple.svg"),
+                      );
+                    }),
+                  ),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Obx(() {
+                      return Button(
+                        type: CommonButtonType.primary,
+                        borderColor: Color(0xffACCEE3),
+                        buttonColor: Colors.white,
+                        onPressed: () {},
+                        child: SvgPicture.asset("assets/google.svg"),
+                      );
+                    }),
+                  ),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Obx(() {
+                      return Button(
+                        type: CommonButtonType.primary,
+                        borderColor: Color(0xffACCEE3),
+                        buttonColor: Colors.white,
+                        onPressed: () {},
+                        child: Icon(Icons.telegram),
+                      );
+                    }),
+                  ),
+                ],
+              ),
+
+              const Spacer(),
+
+              // Terms and privacy
+              Padding(
+                padding: const EdgeInsets.only(bottom: 24),
+                child: RichText(
+                  textAlign: TextAlign.center,
+                  text: TextSpan(
+                    style: GoogleFonts.armata(
+                      fontSize: 12,
+                      color: Colors.grey.shade600,
+                    ),
+                    children: [
+                      TextSpan(text: 'By continuing you agree to our '),
+                      TextSpan(
+                        text: 'Terms of Service',
+                        style: GoogleFonts.armata(
+                          color: Color(0xFF7AB2D3),
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                      TextSpan(text: ' and '),
+                      TextSpan(
+                        text: 'Privacy Policy',
+                        style: GoogleFonts.armata(
+                          color: Color(0xFF7AB2D3),
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ),

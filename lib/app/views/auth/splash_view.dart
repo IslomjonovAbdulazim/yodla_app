@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../routes/app_routes.dart';
 import '../../services/auth_service.dart';
-import '../../utils/app_colors.dart';
 
 class SplashView extends StatefulWidget {
   const SplashView({super.key});
@@ -54,45 +54,15 @@ class _SplashViewState extends State<SplashView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.primary,
+      backgroundColor: Color(0xFFFFFFFF),
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Logo
-            Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(30),
-              ),
-              child: Icon(
-                Icons.school_rounded,
-                size: 60,
-                color: Colors.white,
-              ),
-            ),
-
-            SizedBox(height: 32),
-
-            // App Name
-            Text(
-              'VocabMaster',
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-
-            SizedBox(height: 60),
-
-            // Loading
-            CircularProgressIndicator(
-              color: Colors.white,
-            ),
-          ],
+        child: Text(
+          'YODLA',
+          style: GoogleFonts.armata(
+            fontSize: 50,
+            fontWeight: FontWeight.w900,
+            color: Color(0xFF7AB2D3),
+          ),
         ),
       ),
     );
