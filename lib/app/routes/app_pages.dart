@@ -9,6 +9,7 @@ import '../bindings/word_binding.dart';
 import '../bindings/quiz_binding.dart';
 import '../bindings/voice_binding.dart';
 
+import '../views/folder_detail_page.dart';
 import '../views/home_view.dart';
 import '../views/splash_view.dart';
 import '../views/login_view.dart';
@@ -60,6 +61,13 @@ class AppPages {
       name: AppRoutes.voiceChat,
       page: () => const VoiceChatView(),
       binding: VoiceBinding(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+    ),
+    GetPage(
+      name: AppRoutes.folderDetail,
+      page: () => const FolderDetailPage(),
+      binding: FolderBinding(),
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 300),
     ),

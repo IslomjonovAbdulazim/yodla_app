@@ -31,6 +31,7 @@ dependencies:
   mask_text_input_formatter: ^2.9.0
   dotted_line: ^3.2.3
   bottom_navy_bar: ^6.1.0
+  rename: ^3.1.0
   svg_flutter:
 
 dev_dependencies:

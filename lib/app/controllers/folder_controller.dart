@@ -136,10 +136,6 @@ class FolderController extends GetxController with FormValidationMixin {
           'folder_name': response.data!.name,
         });
 
-        AppHelpers.showSuccessSnackbar(
-          'Folder "${response.data!.name}" created successfully',
-          title: 'Folder Created',
-        );
 
         // Clear form and go back
         _clearForm();
@@ -280,11 +276,6 @@ class FolderController extends GetxController with FormValidationMixin {
           'new_name': response.data!.name,
         });
 
-        AppHelpers.showSuccessSnackbar(
-          'Folder updated successfully',
-          title: 'Folder Updated',
-        );
-
         // Clear form and go back
         _clearForm();
         Get.back();
@@ -354,11 +345,6 @@ class FolderController extends GetxController with FormValidationMixin {
           'deleted_words': response.data!.deletedWordsCount,
         });
 
-        AppHelpers.showSuccessSnackbar(
-          'Folder deleted successfully (${response.data!.deletedWordsCount} words removed)',
-          title: 'Folder Deleted',
-        );
-
         // Go back if we're on folder detail page
         if (Get.currentRoute.contains('folder-detail')) {
           Get.back();
@@ -395,12 +381,6 @@ class FolderController extends GetxController with FormValidationMixin {
 
     AppHelpers.logUserAction('folders_refreshed');
 
-    if (_folders.isNotEmpty) {
-      AppHelpers.showSuccessSnackbar(
-        'Folders refreshed',
-        title: 'Refreshed',
-      );
-    }
   }
 
   /// Validate folder form

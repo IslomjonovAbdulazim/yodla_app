@@ -16,7 +16,6 @@ void main() async {
 
   // Initialize storage service
   await Get.putAsync(() => StorageService().init());
-  print(await Permission.microphone.request());
 
   // Set system UI overlay style
   SystemChrome.setSystemUIOverlayStyle(

@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:lottie/lottie.dart';
 
 import '../controllers/voice_controller.dart';
 import '../utils/app_colors.dart';
@@ -45,7 +46,10 @@ class VoiceAgentsView extends StatelessWidget {
           ),
         ],
       ),
-      body: const SpeakPage(),
+      // body: const SpeakPage(),
+      body: Center(
+        child: Lottie.asset("assets/ani.json"),
+      ),
     );
   }
 }

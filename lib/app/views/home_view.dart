@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:lottie/lottie.dart';
 import 'package:yodla_app/app/views/folders_page.dart';
 
 import '../controllers/voice_controller.dart';
@@ -35,6 +36,9 @@ class _HomeViewState extends State<HomeView> {
 
   late final List<Widget> _pages = [
     const SpeakPage(),
+    // Center(
+    //   child: Lottie.asset("assets/b.json", height: 200),
+    // ),
 
     Center(
       child: Text(
