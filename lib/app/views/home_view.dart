@@ -1,11 +1,11 @@
-// lib/app/views/home/home_view.dart
+// lib/app/views/home_view.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lottie/lottie.dart';
 import 'package:yodla_app/app/views/folders_page.dart';
 
-import '../controllers/voice_controller.dart';
+import '../controllers/voice_stream_controller.dart';
 import '../utils/app_colors.dart';
 import '../widgets/speak_page.dart';
 
@@ -19,26 +19,8 @@ class HomeView extends StatefulWidget {
 class _HomeViewState extends State<HomeView> {
   int _currentIndex = 0;
 
-  // Initialize VoiceController
-  late VoiceController _voiceController;
-
-  @override
-  void initState() {
-    super.initState();
-    // Get or create VoiceController instance
-    try {
-      _voiceController = Get.find<VoiceController>();
-    } catch (e) {
-      // If VoiceController is not found, we'll handle it in the widget
-      print('VoiceController not found in bindings: $e');
-    }
-  }
-
   late final List<Widget> _pages = [
     const SpeakPage(),
-    // Center(
-    //   child: Lottie.asset("assets/b.json", height: 200),
-    // ),
 
     Center(
       child: Text(
@@ -103,15 +85,16 @@ class _HomeViewState extends State<HomeView> {
 
   void _loadVoiceAgentsIfNeeded() {
     try {
-      final voiceController = Get.find<VoiceController>();
+      // Use the new VoiceStreamController
+      final voiceController = Get.find<VoiceStreamController>();
 
       // Load agents if not already loaded
-      if (voiceController.voiceAgents.isEmpty && !voiceController.isLoading) {
-        voiceController.loadVoiceAgents();
+      if (voiceController.agents.isEmpty && !voiceController.isLoading) {
+        voiceController.loadAgents();
       }
     } catch (e) {
       print('Error loading voice agents: $e');
-      // Handle case where VoiceController is not available
+      // Handle case where VoiceStreamController is not available
       Get.snackbar(
         'Error',
         'Voice features are not available. Please restart the app.',

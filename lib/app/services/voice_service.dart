@@ -1,10 +1,10 @@
+// lib/app/services/voice_service.dart
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 import '../models/api_response_model.dart';
 import '../models/voice_agent_model.dart';
@@ -88,13 +88,7 @@ class VoiceService extends GetxService {
       _isConnecting.value = true;
       _sessionStatus.value = VoiceSessionStatus.connecting;
 
-      // Request microphone permission
-      final hasPermission = await _requestMicrophonePermission();
-      if (!hasPermission) {
-        _isConnecting.value = false;
-        _sessionStatus.value = VoiceSessionStatus.error;
-        return ApiResponse.error(error: 'Microphone permission required');
-      }
+      // Removed microphone permission check - let system handle errors
 
       // Start session via API
       final request = StartTopicRequest(agentId: agentId);
@@ -210,7 +204,7 @@ class VoiceService extends GetxService {
         );
       }
     } catch (e) {
-      AppHelpers.logUserAction('stop_voice_session_error', {
+      AppHelpers.logUserAction('stop_voice_session_exception', {
         'error': e.toString(),
       });
 
@@ -223,28 +217,28 @@ class VoiceService extends GetxService {
   /// Connect to WebSocket
   Future<bool> _connectWebSocket(String websocketUrl) async {
     try {
+      AppHelpers.logUserAction('websocket_connect_attempt', {
+        'url': websocketUrl,
+      });
+
       _webSocketChannel = WebSocketChannel.connect(Uri.parse(websocketUrl));
 
+      // Listen to WebSocket messages
       _webSocketSubscription = _webSocketChannel!.stream.listen(
-        _handleWebSocketMessage,
-        onError: _handleWebSocketError,
-        onDone: _handleWebSocketClosed,
+            (data) => _handleWebSocketMessage(data),
+        onError: (error) => _handleWebSocketError(error),
+        onDone: () => _handleWebSocketDisconnection(),
       );
 
-      // Send initial connection message if needed
+      // Wait for connection to establish
       await Future.delayed(const Duration(milliseconds: 500));
 
-      AppHelpers.logUserAction('websocket_connected', {
-        'url': websocketUrl,
-      });
-
+      AppHelpers.logUserAction('websocket_connected');
       return true;
     } catch (e) {
-      AppHelpers.logUserAction('websocket_connection_error', {
-        'url': websocketUrl,
+      AppHelpers.logUserAction('websocket_connect_error', {
         'error': e.toString(),
       });
-
       return false;
     }
   }
@@ -265,88 +259,46 @@ class VoiceService extends GetxService {
     }
   }
 
-  /// Handle WebSocket messages
-  void _handleWebSocketMessage(dynamic message) {
+  /// Handle WebSocket message
+  void _handleWebSocketMessage(dynamic data) {
     try {
-      final Map<String, dynamic> data = json.decode(message);
-      final webSocketMessage = WebSocketMessage.fromJson(data);
+      final message = json.decode(data);
+      final messageType = message['type'] as String?;
 
-      switch (webSocketMessage.type) {
+      AppHelpers.logUserAction('websocket_message_received', {
+        'type': messageType,
+      });
+
+      switch (messageType) {
         case 'audio':
-          _handleAudioMessage(webSocketMessage.data);
+          final audioData = message['audio'] as String?;
+          if (audioData != null) {
+            _playAudioData(audioData);
+          }
           break;
-        case 'agent_response':
-          _handleAgentResponse(webSocketMessage.data);
-          break;
-        case 'user_transcript':
-          _handleUserTranscript(webSocketMessage.data);
+        case 'transcript':
+          final transcript = message['transcript'] as String?;
+          if (transcript != null) {
+            _addMessage(VoiceMessage.agent(transcript));
+          }
           break;
         case 'error':
-          _handleWebSocketError(webSocketMessage.data['message'] ?? 'WebSocket error');
+          final error = message['error'] as String?;
+          AppHelpers.showErrorSnackbar(
+            error ?? 'Voice service error',
+            title: 'Connection Error',
+          );
           break;
-        default:
-          AppHelpers.logUserAction('unknown_websocket_message', {
-            'type': webSocketMessage.type,
-          });
+        case 'session_expired':
+          _sessionStatus.value = VoiceSessionStatus.expired;
+          AppHelpers.showWarningSnackbar(
+            'Voice session has expired',
+            title: 'Session Expired',
+          );
+          break;
       }
     } catch (e) {
-      AppHelpers.logUserAction('websocket_message_error', {
-        'error': e.toString(),
-        'message': message.toString(),
-      });
-    }
-  }
-
-  /// Handle audio message from agent
-  void _handleAudioMessage(Map<String, dynamic> data) {
-    try {
-      final audioEvent = AudioEvent.fromJson(data);
-
-      // TODO: Play audio using audio service
-      _playAudioData(audioEvent.audioBase64);
-
-      AppHelpers.logUserAction('audio_message_received', {
-        'event_id': audioEvent.eventId,
-        'audio_length': audioEvent.audioBase64.length,
-      });
-    } catch (e) {
-      AppHelpers.logUserAction('handle_audio_message_error', {
-        'error': e.toString(),
-      });
-    }
-  }
-
-  /// Handle agent text response
-  void _handleAgentResponse(Map<String, dynamic> data) {
-    try {
-      final agentResponse = AgentResponseEvent.fromJson(data);
-
-      _addMessage(VoiceMessage.agent(agentResponse.agentResponse));
-
-      AppHelpers.logUserAction('agent_response_received', {
-        'response_length': agentResponse.agentResponse.length,
-      });
-    } catch (e) {
-      AppHelpers.logUserAction('handle_agent_response_error', {
-        'error': e.toString(),
-      });
-    }
-  }
-
-  /// Handle user transcript
-  void _handleUserTranscript(Map<String, dynamic> data) {
-    try {
-      final transcriptEvent = UserTranscriptionEvent.fromJson(data);
-
-      if (transcriptEvent.userTranscript.isNotEmpty) {
-        _addMessage(VoiceMessage.user(transcriptEvent.userTranscript));
-      }
-
-      AppHelpers.logUserAction('user_transcript_received', {
-        'transcript_length': transcriptEvent.userTranscript.length,
-      });
-    } catch (e) {
-      AppHelpers.logUserAction('handle_user_transcript_error', {
+      AppHelpers.logUserAction('websocket_message_parse_error', {
         'error': e.toString(),
       });
     }
@@ -359,69 +311,45 @@ class VoiceService extends GetxService {
     });
 
     _sessionStatus.value = VoiceSessionStatus.error;
-
     AppHelpers.showErrorSnackbar(
-      'Voice connection error: ${error.toString()}',
+      'Connection lost to voice service',
       title: 'Connection Error',
     );
   }
 
-  /// Handle WebSocket closed
-  void _handleWebSocketClosed() {
-    AppHelpers.logUserAction('websocket_closed');
+  /// Handle WebSocket disconnection
+  void _handleWebSocketDisconnection() {
+    AppHelpers.logUserAction('websocket_disconnected');
 
     if (_sessionStatus.value == VoiceSessionStatus.connected) {
       _sessionStatus.value = VoiceSessionStatus.disconnected;
-
       AppHelpers.showWarningSnackbar(
-        'Voice connection closed',
+        'Disconnected from voice service',
         title: 'Connection Lost',
       );
     }
   }
 
-  /// Send audio data to WebSocket
-  void _sendAudioData(Uint8List audioData) {
-    try {
-      if (_webSocketChannel == null || !isConnected) {
-        return;
-      }
-
-      final message = {
-        'user_audio_chunk': base64Encode(audioData),
-      };
-
-      _webSocketChannel!.sink.add(json.encode(message));
-
-      AppHelpers.logUserAction('audio_data_sent', {
-        'data_length': audioData.length,
-      });
-    } catch (e) {
-      AppHelpers.logUserAction('send_audio_data_error', {
-        'error': e.toString(),
-      });
-    }
-  }
-
-  /// Send text message to WebSocket
-  void sendTextMessage(String message) {
+  /// Send text message via WebSocket
+  Future<void> sendTextMessage(String text) async {
     try {
       if (_webSocketChannel == null || !isConnected) {
         AppHelpers.showErrorSnackbar('Not connected to voice service');
         return;
       }
 
-      final data = {
-        'type': 'user_message',
-        'text': message,
+      final message = {
+        'type': 'text_input',
+        'text': text,
       };
 
-      _webSocketChannel!.sink.add(json.encode(data));
+      _webSocketChannel!.sink.add(json.encode(message));
 
-      _addMessage(VoiceMessage.user(message));
+      // Add user message to conversation
+      _addMessage(VoiceMessage.user(text));
 
       AppHelpers.logUserAction('text_message_sent', {
-        'message_length': message.length,
+        'message_length': text.length,
       });
     } catch (e) {
       AppHelpers.logUserAction('send_text_message_error', {
@@ -465,10 +393,7 @@ class VoiceService extends GetxService {
         return true; // Already recording
       }
 
-      final hasPermission = await _requestMicrophonePermission();
-      if (!hasPermission) {
-        return false;
-      }
+      // Removed microphone permission check - let system handle errors naturally
 
       // TODO: Implement actual audio recording
       _isRecording.value = true;
@@ -482,8 +407,8 @@ class VoiceService extends GetxService {
         'error': e.toString(),
       });
 
-      AppHelpers.showErrorSnackbar('Failed to start recording');
-      return false;
+      // Let the system error bubble up naturally instead of showing custom error
+      rethrow;
     }
   }
 
@@ -503,6 +428,9 @@ class VoiceService extends GetxService {
       AppHelpers.logUserAction('stop_recording_error', {
         'error': e.toString(),
       });
+
+      // Let the system error bubble up naturally
+      rethrow;
     }
   }
 
@@ -529,6 +457,9 @@ class VoiceService extends GetxService {
       AppHelpers.logUserAction('play_audio_error', {
         'error': e.toString(),
       });
+
+      // Let the system error bubble up naturally
+      rethrow;
     }
   }
 
@@ -539,207 +470,6 @@ class VoiceService extends GetxService {
     // Update current session
     if (_currentSession.value != null) {
       _currentSession.value = _currentSession.value!.addMessage(message);
-    }
-  }
-
-  /// Request microphone permission
-  /// Request microphone permission
-  /// Request microphone permission
-  Future<bool> _requestMicrophonePermission() async {
-    try {
-      // First check current permission status
-      final currentStatus = await Permission.microphone.status;
-
-      AppHelpers.logUserAction('microphone_permission_check', {
-        'current_status': currentStatus.toString(),
-      });
-
-      // If already granted, return true
-      if (currentStatus.isGranted) {
-        return true;
-      }
-
-      // If permanently denied, show settings dialog
-      if (currentStatus.isPermanentlyDenied) {
-        final shouldOpenSettings = await _showPermissionDialog(
-          title: 'Microphone Access Required',
-          message: 'To use voice conversations, please enable microphone access in your device settings.\n\nGo to Settings > Privacy & Security > Microphone > Yodla App',
-          confirmText: 'Open Settings',
-          cancelText: 'Cancel',
-          isSettingsDialog: true,
-        );
-
-        if (shouldOpenSettings) {
-          await openAppSettings();
-
-          // Wait for user to come back and check again
-          await Future.delayed(const Duration(milliseconds: 1000));
-          final newStatus = await Permission.microphone.status;
-
-          AppHelpers.logUserAction('permission_recheck_after_settings', {
-            'status': newStatus.toString(),
-          });
-
-          if (newStatus.isGranted) {
-            AppHelpers.showSuccessSnackbar('Microphone access enabled!');
-            return true;
-          } else {
-            AppHelpers.showWarningSnackbar(
-                'Microphone access is still disabled. Voice conversations won\'t work without it.',
-                title: 'Permission Still Disabled'
-            );
-            return false;
-          }
-        }
-
-        return false;
-      }
-
-      // Show explanation dialog first
-      final shouldRequestPermission = await _showPermissionDialog(
-        title: 'Enable Voice Conversations',
-        message: 'Yodla needs access to your microphone to enable voice conversations with AI agents.\n\nYour voice data is processed securely and never stored without your consent.',
-        confirmText: 'Allow Access',
-        cancelText: 'Not Now',
-        isSettingsDialog: false,
-      );
-
-      if (!shouldRequestPermission) {
-        return false;
-      }
-
-      // Now request the actual permission
-      final status = await Permission.microphone.request();
-
-      AppHelpers.logUserAction('microphone_permission_requested', {
-        'status': status.toString(),
-      });
-
-      if (status.isGranted) {
-        AppHelpers.showSuccessSnackbar('Microphone access granted!');
-        return true;
-      } else if (status.isPermanentlyDenied) {
-        AppHelpers.showWarningSnackbar(
-            'Microphone access was denied. You can enable it later in Settings if you change your mind.',
-            title: 'Permission Denied'
-        );
-        return false;
-      } else {
-        // Denied but not permanently
-        AppHelpers.showWarningSnackbar(
-            'Microphone access is required for voice conversations.',
-            title: 'Permission Needed'
-        );
-        return false;
-      }
-
-    } catch (e) {
-      AppHelpers.logUserAction('microphone_permission_error', {
-        'error': e.toString(),
-      });
-
-      AppHelpers.showErrorSnackbar(
-        'Failed to request microphone permission: ${e.toString()}',
-        title: 'Permission Error',
-      );
-
-      return false;
-    }
-  }
-
-  /// Show permission explanation dialog
-  Future<bool> _showPermissionDialog({
-    required String title,
-    required String message,
-    required String confirmText,
-    required String cancelText,
-    required bool isSettingsDialog,
-  }) async {
-    final result = await Get.dialog<bool>(
-      AlertDialog(
-        title: Row(
-          children: [
-            Icon(
-              isSettingsDialog ? Icons.settings : Icons.mic,
-              color: Get.theme.primaryColor,
-              size: 24,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ),
-        content: Text(
-          message,
-          style: const TextStyle(
-            fontSize: 16,
-            height: 1.5,
-          ),
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        actionsPadding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(result: false),
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            ),
-            child: Text(
-              cancelText,
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () => Get.back(result: true),
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            child: Text(
-              confirmText,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-      barrierDismissible: false,
-    );
-
-    return result ?? false;
-  }
-
-  /// Check if microphone permission is available in device settings
-  Future<bool> _isMicrophonePermissionAvailable() async {
-    try {
-      // Check if the permission is properly configured
-      final status = await Permission.microphone.status;
-
-      // If it's undetermined, it means the permission is properly set up
-      // If it's permanently denied, it should still appear in settings
-      return status != PermissionStatus.restricted;
-    } catch (e) {
-      AppHelpers.logUserAction('check_microphone_availability_error', {
-        'error': e.toString(),
-      });
-      return false;
     }
   }
 
@@ -821,32 +551,5 @@ class VoiceService extends GetxService {
     if (_currentSession.value != null && _sessionStatus.value == VoiceSessionStatus.connected) {
       _handleSessionExpiry();
     }
-  }
-}
-
-/// Voice session manager for background tasks
-class VoiceSessionManager extends GetxService {
-  Timer? _healthCheckTimer;
-
-  @override
-  void onInit() {
-    super.onInit();
-    _startHealthCheck();
-  }
-
-  @override
-  void onClose() {
-    _healthCheckTimer?.cancel();
-    super.onClose();
-  }
-
-  void _startHealthCheck() {
-    _healthCheckTimer = Timer.periodic(
-      const Duration(minutes: 1),
-          (timer) {
-        final voiceService = Get.find<VoiceService>();
-        voiceService.checkConnectionHealth();
-      },
-    );
   }
 }

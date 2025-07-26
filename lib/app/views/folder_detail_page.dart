@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:yodla_app/app/routes/app_routes.dart';
 
 import '../controllers/folder_controller.dart';
 import '../controllers/word_controller.dart';
@@ -73,14 +72,7 @@ class _FolderDetailPageState extends State<FolderDetailPage> {
         icon: const Icon(Icons.arrow_back_rounded),
         color: AppColors.textPrimary,
       ),
-      actions: [
-        IconButton(
-          onPressed: () => Get.toNamed(AppRoutes.scan),
-          icon: const Icon(Icons.qr_code_scanner_rounded),
-          color: AppColors.textPrimary,
-          tooltip: 'Scan',
-        ),
-      ],
+      actions: [],
     );
   }
 
@@ -510,7 +502,6 @@ class _FolderDetailPageState extends State<FolderDetailPage> {
               const SizedBox(height: 16),
 
               // Example sentence field with generate button
-
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -667,13 +658,10 @@ class _FolderDetailPageState extends State<FolderDetailPage> {
                 ],
               ),
 
-
               const SizedBox(height: 32),
               Text(
                 "Zehnly can make mistakes. Check important info.",
-                style: GoogleFonts.armata(
-                  fontSize: 11,
-                ),
+                style: GoogleFonts.armata(fontSize: 11),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -731,15 +719,14 @@ class _FolderDetailPageState extends State<FolderDetailPage> {
 
   Future<void> _addWord() async {
     try {
-      await wordController.addWord(folderId);
-
-      // Refresh folder details after successful addition
-      await folderController.loadFolderDetail(folderId);
-
       // Close dialog if still open
       if (Get.isDialogOpen ?? false) {
         Get.back();
       }
+      await wordController.addWord(folderId);
+
+      // Refresh folder details after successful addition
+      await folderController.loadFolderDetail(folderId);
     } catch (e) {
       // Error handling is already done in the controller
       print('Error adding word: $e');
@@ -906,6 +893,7 @@ class _FolderDetailPageState extends State<FolderDetailPage> {
               ),
               const SizedBox(height: 20),
 
+              // English word field
               _buildDialogTextField(
                 controller: wordController.wordController,
                 label: 'English word',
@@ -913,10 +901,89 @@ class _FolderDetailPageState extends State<FolderDetailPage> {
               ),
               const SizedBox(height: 16),
 
-              _buildDialogTextField(
-                controller: wordController.translationController,
-                label: 'Uzbek translation',
-                hint: 'e.g., chiroyli',
+              // Translation field with translate button
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Uzbek translation',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ),
+                      Obx(
+                        () => GestureDetector(
+                          onTap: wordController.isTranslating
+                              ? null
+                              : () => wordController.translateWord(),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: wordController.isTranslating
+                                ? SizedBox(
+                                    width: 12,
+                                    height: 12,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: AppColors.primary,
+                                    ),
+                                  )
+                                : Text(
+                                    'Translate',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w500,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: wordController.translationController,
+                    decoration: InputDecoration(
+                      hintText: 'e.g., chiroyli',
+                      hintStyle: GoogleFonts.inter(
+                        fontSize: 15,
+                        color: AppColors.textSecondary,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade200),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: AppColors.primary,
+                          width: 2,
+                        ),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                    ),
+                    style: GoogleFonts.inter(
+                      fontSize: 15,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
 
@@ -930,7 +997,7 @@ class _FolderDetailPageState extends State<FolderDetailPage> {
                         child: Text(
                           'Example sentence (optional)',
                           style: GoogleFonts.inter(
-                            fontSize: 14,
+                            fontSize: 12,
                             fontWeight: FontWeight.w500,
                             color: AppColors.textPrimary,
                           ),
@@ -975,7 +1042,7 @@ class _FolderDetailPageState extends State<FolderDetailPage> {
                   const SizedBox(height: 8),
                   TextField(
                     controller: wordController.exampleController,
-                    maxLines: 2,
+                    maxLines: 3,
                     decoration: InputDecoration(
                       hintText: 'e.g., She is very beautiful.',
                       hintStyle: GoogleFonts.inter(
@@ -1005,9 +1072,9 @@ class _FolderDetailPageState extends State<FolderDetailPage> {
                   ),
                 ],
               ),
+              const SizedBox(height: 16),
 
-              const SizedBox(height: 24),
-
+              // Action buttons
               Row(
                 children: [
                   Expanded(
@@ -1076,6 +1143,13 @@ class _FolderDetailPageState extends State<FolderDetailPage> {
                   ),
                 ],
               ),
+
+              const SizedBox(height: 32),
+              Text(
+                "Zehnly can make mistakes. Check important info.",
+                style: GoogleFonts.armata(fontSize: 11),
+                textAlign: TextAlign.center,
+              ),
             ],
           ),
         ),
@@ -1085,15 +1159,11 @@ class _FolderDetailPageState extends State<FolderDetailPage> {
 
   Future<void> _updateWord(int wordId) async {
     try {
+      Get.back();
       await wordController.updateWord(wordId);
-
       // Refresh folder details after successful update
       await folderController.loadFolderDetail(folderId);
 
-      // Close dialog if still open
-      if (Get.isDialogOpen ?? false) {
-        Get.back();
-      }
     } catch (e) {
       print('Error updating word: $e');
     }

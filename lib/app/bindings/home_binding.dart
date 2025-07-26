@@ -2,20 +2,20 @@
 import 'package:get/get.dart';
 
 import '../controllers/home_controller.dart';
-import '../controllers/voice_controller.dart';
-import '../services/voice_service.dart';
+import '../controllers/voice_stream_controller.dart';
+import '../services/voice_stream_service.dart';
 
 class HomeBinding extends Bindings {
   @override
   void dependencies() {
-    // Register VoiceService first
-    if (!Get.isRegistered<VoiceService>()) {
-      Get.lazyPut<VoiceService>(() => VoiceService());
+    // Register new VoiceStreamService first
+    if (!Get.isRegistered<VoiceStreamService>()) {
+      Get.lazyPut<VoiceStreamService>(() => VoiceStreamService());
     }
 
-    // Register VoiceController for Speak tab
-    if (!Get.isRegistered<VoiceController>()) {
-      Get.lazyPut<VoiceController>(() => VoiceController());
+    // Register new VoiceStreamController for Speak tab
+    if (!Get.isRegistered<VoiceStreamController>()) {
+      Get.lazyPut<VoiceStreamController>(() => VoiceStreamController());
     }
 
     // Register HomeController

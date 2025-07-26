@@ -572,6 +572,10 @@ class WordController extends GetxController with FormValidationMixin {
         data: request.toJson(),
         fromJson: (json) => TranslateWordResponse.fromJson(json),
       );
+      print(response.error);
+      print(response.statusCode);
+      print(response.meta);
+      print(response.success);
 
       if (response.success && response.data != null) {
         _translationOptions.value = response.data!;

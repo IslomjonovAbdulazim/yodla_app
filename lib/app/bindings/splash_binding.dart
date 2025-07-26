@@ -6,6 +6,7 @@ import '../services/api_service.dart';
 import '../services/scan_service.dart';
 import '../services/storage_service.dart';
 import '../services/camera_service.dart';
+import '../services/voice_stream_service.dart';
 
 class SplashBinding extends Bindings {
   @override
@@ -15,10 +16,10 @@ class SplashBinding extends Bindings {
     Get.lazyPut<ApiService>(() => ApiService());
     Get.lazyPut<AuthService>(() => AuthService());
     Get.lazyPut<CameraService>(() => CameraService()); // Global registration
+    Get.lazyPut<VoiceStreamService>(() => VoiceStreamService()); // Add this
 
     // Controllers
     Get.lazyPut<AuthController>(() => AuthController());
     Get.put(ScanService());
-
   }
 }

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import '../utils/constants.dart';
 
 /// Word Model - Exact match with backend Word model
@@ -77,13 +79,12 @@ class Word {
   int get hashCode => id.hashCode;
 }
 
-/// Word Stats Model - Exact match with backend WordStats model
+/// Word Stats Model - Updated without last_5_results
 class WordStats {
   final int id;
   final int wordId;
   final int userId;
   final String category;
-  final List<bool> last5Results;
   final int totalAttempts;
   final int correctAttempts;
 
@@ -92,7 +93,6 @@ class WordStats {
     required this.wordId,
     required this.userId,
     required this.category,
-    required this.last5Results,
     required this.totalAttempts,
     required this.correctAttempts,
   });
@@ -103,9 +103,6 @@ class WordStats {
       wordId: json['word_id'] ?? 0,
       userId: json['user_id'] ?? 0,
       category: json['category'] ?? 'not_known',
-      last5Results: (json['last_5_results'] as List<dynamic>? ?? [])
-          .map((result) => result as bool)
-          .toList(),
       totalAttempts: json['total_attempts'] ?? 0,
       correctAttempts: json['correct_attempts'] ?? 0,
     );
@@ -117,7 +114,6 @@ class WordStats {
       'word_id': wordId,
       'user_id': userId,
       'category': category,
-      'last_5_results': last5Results,
       'total_attempts': totalAttempts,
       'correct_attempts': correctAttempts,
     };
@@ -133,26 +129,17 @@ class WordStats {
 
   /// Add new quiz result (matches backend add_result method logic)
   WordStats addResult(bool isCorrect) {
-    final newResults = List<bool>.from(last5Results);
-    newResults.add(isCorrect);
-
-    // Keep only last 5 results
-    if (newResults.length > 5) {
-      newResults.removeAt(0);
-    }
-
     final newTotalAttempts = totalAttempts + 1;
     final newCorrectAttempts = correctAttempts + (isCorrect ? 1 : 0);
 
-    // Calculate new category based on last 5 results
+    // Calculate new category based on overall accuracy
     String newCategory = 'not_known';
-    if (newResults.length >= 3) {
-      final recentCorrect = newResults.where((result) => result).length;
-      final recentAccuracy = recentCorrect / newResults.length;
+    if (newTotalAttempts >= 3) {
+      final overallAccuracy = newCorrectAttempts / newTotalAttempts;
 
-      if (recentAccuracy >= 0.8) {
+      if (overallAccuracy >= 0.8) {
         newCategory = 'strong';
-      } else if (recentAccuracy >= 0.5) {
+      } else if (overallAccuracy >= 0.5) {
         newCategory = 'normal';
       } else {
         newCategory = 'not_known';
@@ -160,7 +147,6 @@ class WordStats {
     }
 
     return copyWith(
-      last5Results: newResults,
       totalAttempts: newTotalAttempts,
       correctAttempts: newCorrectAttempts,
       category: newCategory,
@@ -172,7 +158,6 @@ class WordStats {
     int? wordId,
     int? userId,
     String? category,
-    List<bool>? last5Results,
     int? totalAttempts,
     int? correctAttempts,
   }) {
@@ -181,7 +166,6 @@ class WordStats {
       wordId: wordId ?? this.wordId,
       userId: userId ?? this.userId,
       category: category ?? this.category,
-      last5Results: last5Results ?? this.last5Results,
       totalAttempts: totalAttempts ?? this.totalAttempts,
       correctAttempts: correctAttempts ?? this.correctAttempts,
     );
@@ -189,7 +173,83 @@ class WordStats {
 
   @override
   String toString() {
-    return 'WordStats{id: $id, wordId: $wordId, userId: $userId, category: $category, last5Results: $last5Results, totalAttempts: $totalAttempts, correctAttempts: $correctAttempts}';
+    return 'WordStats{id: $id, wordId: $wordId, userId: $userId, category: $category, totalAttempts: $totalAttempts, correctAttempts: $correctAttempts}';
+  }
+}
+
+/// Word Stats Info - Used in word with stats (Updated without last_5_results)
+class WordStatsInfo {
+  final String category;
+  final int accuracy;
+
+  WordStatsInfo({
+    required this.category,
+    required this.accuracy,
+  });
+
+  factory WordStatsInfo.fromJson(Map<String, dynamic> json) {
+    return WordStatsInfo(
+      category: json['category'] ?? 'not_known',
+      accuracy: json['accuracy'] ?? 0,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'category': category,
+      'accuracy': accuracy,
+    };
+  }
+
+  WordCategory get categoryEnum => WordCategory.fromString(category);
+
+  @override
+  String toString() {
+    return 'WordStatsInfo{category: $category, accuracy: $accuracy}';
+  }
+}
+
+/// Word Detail Stats - Used in word detail response (Updated without last_5_results)
+class WordDetailStats {
+  final String category;
+  final int totalAttempts;
+  final int correctAttempts;
+  final int accuracy;
+  final String? lastQuizDate;
+
+  WordDetailStats({
+    required this.category,
+    required this.totalAttempts,
+    required this.correctAttempts,
+    required this.accuracy,
+    this.lastQuizDate,
+  });
+
+  factory WordDetailStats.fromJson(Map<String, dynamic> json) {
+    return WordDetailStats(
+      category: json['category'] ?? 'not_known',
+      totalAttempts: json['total_attempts'] ?? 0,
+      correctAttempts: json['correct_attempts'] ?? 0,
+      accuracy: json['accuracy'] ?? 0,
+      lastQuizDate: json['last_quiz_date'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'category': category,
+      'total_attempts': totalAttempts,
+      'correct_attempts': correctAttempts,
+      'accuracy': accuracy,
+      'last_quiz_date': lastQuizDate,
+    };
+  }
+
+  WordCategory get categoryEnum => WordCategory.fromString(category);
+
+  @override
+  String toString() {
+    return 'WordDetailStats{category: $category, totalAttempts: $totalAttempts, correctAttempts: $correctAttempts, accuracy: $accuracy, lastQuizDate: $lastQuizDate}';
   }
 }
 
@@ -635,56 +695,6 @@ class FolderInfo {
   }
 }
 
-/// Word Detail Stats - Used in word detail response
-class WordDetailStats {
-  final String category;
-  final List<bool> last5Results;
-  final int totalAttempts;
-  final int correctAttempts;
-  final int accuracy;
-  final String? lastQuizDate;
-
-  WordDetailStats({
-    required this.category,
-    required this.last5Results,
-    required this.totalAttempts,
-    required this.correctAttempts,
-    required this.accuracy,
-    this.lastQuizDate,
-  });
-
-  factory WordDetailStats.fromJson(Map<String, dynamic> json) {
-    return WordDetailStats(
-      category: json['category'] ?? 'not_known',
-      last5Results: (json['last_5_results'] as List<dynamic>? ?? [])
-          .map((result) => result as bool)
-          .toList(),
-      totalAttempts: json['total_attempts'] ?? 0,
-      correctAttempts: json['correct_attempts'] ?? 0,
-      accuracy: json['accuracy'] ?? 0,
-      lastQuizDate: json['last_quiz_date'],
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'category': category,
-      'last_5_results': last5Results,
-      'total_attempts': totalAttempts,
-      'correct_attempts': correctAttempts,
-      'accuracy': accuracy,
-      'last_quiz_date': lastQuizDate,
-    };
-  }
-
-  WordCategory get categoryEnum => WordCategory.fromString(category);
-
-  @override
-  String toString() {
-    return 'WordDetailStats{category: $category, last5Results: $last5Results, totalAttempts: $totalAttempts, correctAttempts: $correctAttempts, accuracy: $accuracy, lastQuizDate: $lastQuizDate}';
-  }
-}
-
 /// Update Word Request - Matches PUT /words/{word_id} request
 class UpdateWordRequest {
   final String? word;
@@ -800,7 +810,7 @@ class TranslateWordRequest {
 
   TranslateWordRequest({required this.word});
 
-  Map<String, dynamic> toJson() => {'word': word};
+  Map<String, dynamic> toJson() => {'word': word, 'last_5_results': []};
 }
 
 class TranslateWordResponse {

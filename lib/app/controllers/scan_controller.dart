@@ -1,5 +1,7 @@
+// lib/app/controllers/scan_controller.dart
 import 'dart:io';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -29,6 +31,9 @@ class ScanController extends GetxController {
 
   // Processing state
   final RxString processingStatus = ''.obs;
+
+  // Individual word adding state
+  final RxBool isAddingWord = false.obs;
 
   @override
   void onInit() {
@@ -63,7 +68,6 @@ class ScanController extends GetxController {
   Future<void> openGallery() async {
     try {
       final imageFile = await _scanService.pickImage();
-      print(imageFile);
       if (imageFile != null) {
         selectedImage.value = imageFile;
         await processImage(imageFile);
@@ -85,18 +89,15 @@ class ScanController extends GetxController {
         extractedWords.value = response.data!.extractedWords;
         selectedWords.clear();
 
-        // Auto-select words with high confidence
+        // Don't auto-select words anymore - let user choose
         for (final word in extractedWords) {
-          if (word.confidence > 0.8) {
-            word.isSelected = true;
-            selectedWords.add(word);
-          }
+          word.isSelected = false;
         }
 
         currentStep.value = 'selecting';
 
         _showSuccessSnackbar(
-          'Found ${extractedWords.length} words. Select words to add to your vocabulary.',
+          'Found ${extractedWords.length} words. Tap any word to add it to your vocabulary.',
         );
       } else {
         currentStep.value = 'ready';
@@ -116,7 +117,91 @@ class ScanController extends GetxController {
     }
   }
 
-  /// Toggle word selection
+  /// Add a single word to default folder or prompt for folder selection
+  Future<void> addSingleWord(ExtractedWord word, {
+    String? translation,
+    String? example,
+    int? folderId,
+  }) async {
+    try {
+      isAddingWord.value = true;
+
+      // Use default folder if none provided
+      int targetFolderId = folderId ?? await getDefaultFolderId();
+
+      final wordData = {
+        'word': word.word,
+        'translation': translation ?? word.translation,
+        'example_sentence': example,
+      };
+
+      final response = await _apiService.post<Map<String, dynamic>>(
+        ApiEndpoints.addWord(targetFolderId),
+        data: wordData,
+        fromJson: (json) => json,
+      );
+
+      if (response.success) {
+        // Mark word as selected visually
+        word.isSelected = true;
+        extractedWords.refresh();
+
+        _showSuccessSnackbar('Word "${word.word}" added successfully!');
+      } else {
+        _showErrorSnackbar(
+          response.error ?? 'Failed to add word',
+        );
+      }
+    } catch (e) {
+      _showErrorSnackbar('Failed to add word: ${e.toString()}');
+    } finally {
+      isAddingWord.value = false;
+    }
+  }
+
+  /// Get default folder ID (first folder or create one if none exists)
+  Future<int> getDefaultFolderId() async {
+    final folderController = Get.find<FolderController>();
+
+    if (folderController.folders.isEmpty) {
+      await folderController.loadFolders();
+    }
+
+    if (folderController.folders.isNotEmpty) {
+      return folderController.folders.first.id;
+    } else {
+      // Create a default folder if none exists
+      return await _createDefaultFolder();
+    }
+  }
+
+  /// Create default folder for scanned words
+  Future<int> _createDefaultFolder() async {
+    try {
+      final response = await _apiService.post<FolderResponse>(
+        ApiEndpoints.folders,
+        data: {
+          'name': 'Scanned Words',
+          'description': 'Words added from image scanning',
+        },
+        fromJson: (json) => FolderResponse.fromJson(json),
+      );
+
+      if (response.success && response.data != null) {
+        // Reload folders to get the updated list
+        final folderController = Get.find<FolderController>();
+        await folderController.loadFolders();
+
+        return response.data!.id;
+      } else {
+        throw Exception('Failed to create default folder');
+      }
+    } catch (e) {
+      throw Exception('Failed to create default folder: ${e.toString()}');
+    }
+  }
+
+  /// Toggle word selection (for future bulk operations if needed)
   void toggleWordSelection(ExtractedWord word) {
     final index = extractedWords.indexWhere((w) => w.word == word.word);
     if (index != -1) {
@@ -136,7 +221,7 @@ class ScanController extends GetxController {
     }
   }
 
-  /// Select all words
+  /// Select all words (for future bulk operations)
   void selectAllWords() {
     selectedWords.clear();
     for (final word in extractedWords) {
@@ -158,11 +243,12 @@ class ScanController extends GetxController {
   }
 
   /// Set target folder for adding words
-  void setTargetFolder(Folder folder) {
-    targetFolder.value = folder;
+  void setTargetFolder(FolderResponse folder) {
+    // Convert FolderResponse to Folder if needed, or work with FolderResponse directly
+    targetFolder.value = folder.toFolder();
   }
 
-  /// Add selected words to the target folder
+  /// Add selected words to the target folder (bulk operation)
   Future<void> addSelectedWords() async {
     if (targetFolder.value == null) {
       _showErrorSnackbar('Please select a folder to add words to');
@@ -223,6 +309,7 @@ class ScanController extends GetxController {
     selectedWords.clear();
     targetFolder.value = null;
     isLoading.value = false;
+    isAddingWord.value = false;
     processingStatus.value = '';
   }
 
@@ -251,6 +338,8 @@ class ScanController extends GetxController {
       backgroundColor: CupertinoColors.systemGreen.withOpacity(0.1),
       colorText: CupertinoColors.systemGreen.darkColor,
       duration: const Duration(seconds: 3),
+      margin: const EdgeInsets.all(16),
+      borderRadius: 12,
     );
   }
 
@@ -261,6 +350,60 @@ class ScanController extends GetxController {
       message,
       backgroundColor: CupertinoColors.systemRed.withOpacity(0.1),
       colorText: CupertinoColors.systemRed.darkColor,
+      duration: const Duration(seconds: 3),
+      margin: const EdgeInsets.all(16),
+      borderRadius: 12,
+    );
+  }
+
+  /// Show folder selection bottom sheet (for future use)
+  void showFolderSelection() {
+    final folderController = Get.find<FolderController>();
+
+    Get.bottomSheet(
+      Container(
+        padding: const EdgeInsets.all(16),
+        decoration: const BoxDecoration(
+          color: CupertinoColors.systemBackground,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 20),
+              decoration: BoxDecoration(
+                color: CupertinoColors.separator,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+
+            const Text(
+              'Select Folder',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            ...folderController.folders.map((folderResponse) {
+              return ListTile(
+                title: Text(folderResponse.name),
+                subtitle: Text('${folderResponse.wordCount} words'),
+                onTap: () {
+                  setTargetFolder(folderResponse);
+                  Get.back();
+                  addSelectedWords();
+                },
+              );
+            }).toList(),
+          ],
+        ),
+      ),
     );
   }
 

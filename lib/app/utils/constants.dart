@@ -2,14 +2,15 @@ class AppConstants {
   // App Info
   static const String appName = 'Vocabulary Learning';
   static const String appVersion = '1.0.0';
+  // Increase from 30 seconds to 2-3 minutes for photo uploads
 
   // API Configuration
   // Translation endpoints
   static const String translateWord = '/words/translate';
   static const String baseUrl = 'https://conversationaibackend-production.up.railway.app'; // TODO: Replace with your actual API URL
   static const String apiVersion = 'v1';
-  static const Duration connectTimeout = Duration(seconds: 30);
-  static const Duration receiveTimeout = Duration(seconds: 30);
+  static const Duration connectTimeout = Duration(seconds: 60);
+  static const Duration receiveTimeout = Duration(minutes: 3);
 
   // Storage Keys
   static const String tokenKey = 'access_token';
@@ -40,6 +41,7 @@ class ApiEndpoints {
   // Translation endpoints
   static const String translateWord = '/words/translate';
   static const String appleSignIn = '/auth/apple-signin';
+
   static const String testLogin = '/auth/test-login'; // Dev only
 
   // User Management
