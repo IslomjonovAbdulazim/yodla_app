@@ -776,3 +776,51 @@ class DeleteWordResponse {
     return 'DeleteWordResponse{success: $success, message: $message, deletedWord: $deletedWord}';
   }
 }
+
+/// Translation models for new translate endpoints
+class TranslationOption {
+  final String translation;
+  final double confidence;
+
+  TranslationOption({
+    required this.translation,
+    required this.confidence,
+  });
+
+  factory TranslationOption.fromJson(Map<String, dynamic> json) {
+    return TranslationOption(
+      translation: json['translation'],
+      confidence: (json['confidence'] as num).toDouble(),
+    );
+  }
+}
+
+class TranslateWordRequest {
+  final String word;
+
+  TranslateWordRequest({required this.word});
+
+  Map<String, dynamic> toJson() => {'word': word};
+}
+
+class TranslateWordResponse {
+  final String word;
+  final List<TranslationOption> options;
+  final int totalOptions;
+
+  TranslateWordResponse({
+    required this.word,
+    required this.options,
+    required this.totalOptions,
+  });
+
+  factory TranslateWordResponse.fromJson(Map<String, dynamic> json) {
+    return TranslateWordResponse(
+      word: json['word'],
+      options: (json['options'] as List)
+          .map((option) => TranslationOption.fromJson(option))
+          .toList(),
+      totalOptions: json['total_options'],
+    );
+  }
+}

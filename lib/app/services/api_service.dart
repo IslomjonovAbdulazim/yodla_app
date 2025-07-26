@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:get/get.dart' as getx;
+import 'package:http_parser/http_parser.dart';
 
 import '../models/api_response_model.dart';
 import '../utils/constants.dart';
@@ -15,6 +16,21 @@ class ApiService extends getx.GetxService {
     super.onInit();
     _storageService = getx.Get.find<StorageService>();
     _initializeDio();
+  }
+
+  MediaType _detectContentType(String fileName) {
+    final ext = fileName.toLowerCase();
+    if (ext.endsWith('.jpg') || ext.endsWith('.jpeg')) {
+      return MediaType('image', 'jpeg');
+    } else if (ext.endsWith('.png')) {
+      return MediaType('image', 'png');
+    } else if (ext.endsWith('.heic')) {
+      return MediaType('image', 'heic');
+    } else if (ext.endsWith('.heif')) {
+      return MediaType('image', 'heif');
+    } else {
+      return MediaType('application', 'octet-stream'); // fallback
+    }
   }
 
   void _initializeDio() {
@@ -230,6 +246,7 @@ class ApiService extends getx.GetxService {
         fileKey: await MultipartFile.fromFile(
           file.path,
           filename: fileName,
+          contentType: _detectContentType(fileName),
         ),
       });
 

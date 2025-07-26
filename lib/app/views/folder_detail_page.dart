@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:yodla_app/app/routes/app_routes.dart';
 
 import '../controllers/folder_controller.dart';
 import '../controllers/word_controller.dart';
@@ -40,16 +41,12 @@ class _FolderDetailPageState extends State<FolderDetailPage> {
       appBar: _buildAppBar(),
       body: Obx(() {
         if (folderController.isLoading) {
-          return const Center(
-            child: CircularProgressIndicator(strokeWidth: 2),
-          );
+          return const Center(child: CircularProgressIndicator(strokeWidth: 2));
         }
 
         final folderDetail = folderController.currentFolderDetail;
         if (folderDetail == null) {
-          return const Center(
-            child: Text('Folder not found'),
-          );
+          return const Center(child: Text('Folder not found'));
         }
 
         return Column(
@@ -78,9 +75,10 @@ class _FolderDetailPageState extends State<FolderDetailPage> {
       ),
       actions: [
         IconButton(
-          onPressed: () => _showFolderOptions(),
-          icon: const Icon(Icons.more_horiz_rounded),
+          onPressed: () => Get.toNamed(AppRoutes.scan),
+          icon: const Icon(Icons.qr_code_scanner_rounded),
           color: AppColors.textPrimary,
+          tooltip: 'Scan',
         ),
       ],
     );
@@ -370,9 +368,7 @@ class _FolderDetailPageState extends State<FolderDetailPage> {
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: const Icon(Icons.add_rounded, size: 28),
       ),
     );
@@ -427,15 +423,94 @@ class _FolderDetailPageState extends State<FolderDetailPage> {
               ),
               const SizedBox(height: 16),
 
-              // Translation field
-              _buildDialogTextField(
-                controller: wordController.translationController,
-                label: 'Uzbek translation',
-                hint: 'e.g., chiroyli',
+              // Translation field with translate button
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Uzbek translation',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ),
+                      Obx(
+                        () => GestureDetector(
+                          onTap: wordController.isTranslating
+                              ? null
+                              : () => wordController.translateWord(),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: wordController.isTranslating
+                                ? SizedBox(
+                                    width: 12,
+                                    height: 12,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: AppColors.primary,
+                                    ),
+                                  )
+                                : Text(
+                                    'Translate',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w500,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: wordController.translationController,
+                    decoration: InputDecoration(
+                      hintText: 'e.g., chiroyli',
+                      hintStyle: GoogleFonts.inter(
+                        fontSize: 15,
+                        color: AppColors.textSecondary,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade200),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: AppColors.primary,
+                          width: 2,
+                        ),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                    ),
+                    style: GoogleFonts.inter(
+                      fontSize: 15,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
 
               // Example sentence field with generate button
+
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -445,47 +520,52 @@ class _FolderDetailPageState extends State<FolderDetailPage> {
                         child: Text(
                           'Example sentence (optional)',
                           style: GoogleFonts.inter(
-                            fontSize: 14,
+                            fontSize: 12,
                             fontWeight: FontWeight.w500,
                             color: AppColors.textPrimary,
                           ),
                         ),
                       ),
-                      Obx(() => GestureDetector(
-                        onTap: wordController.isGeneratingExample
-                            ? null
-                            : () => wordController.generateExampleSentence(),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: wordController.isGeneratingExample
-                              ? SizedBox(
-                            width: 12,
-                            height: 12,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: AppColors.primary,
+                      Obx(
+                        () => GestureDetector(
+                          onTap: wordController.isGeneratingExample
+                              ? null
+                              : () => wordController.generateExampleSentence(),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
                             ),
-                          )
-                              : Text(
-                            'Generate',
-                            style: GoogleFonts.inter(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
-                              color: AppColors.primary,
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(6),
                             ),
+                            child: wordController.isGeneratingExample
+                                ? SizedBox(
+                                    width: 12,
+                                    height: 12,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: AppColors.primary,
+                                    ),
+                                  )
+                                : Text(
+                                    'Generate',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w500,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
                           ),
                         ),
-                      )),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 8),
                   TextField(
                     controller: wordController.exampleController,
-                    maxLines: 2,
+                    maxLines: 3,
                     decoration: InputDecoration(
                       hintText: 'e.g., She is very beautiful.',
                       hintStyle: GoogleFonts.inter(
@@ -498,9 +578,15 @@ class _FolderDetailPageState extends State<FolderDetailPage> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: AppColors.primary, width: 2),
+                        borderSide: BorderSide(
+                          color: AppColors.primary,
+                          width: 2,
+                        ),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                     ),
                     style: GoogleFonts.inter(
                       fontSize: 15,
@@ -509,8 +595,7 @@ class _FolderDetailPageState extends State<FolderDetailPage> {
                   ),
                 ],
               ),
-
-              const SizedBox(height: 24),
+              SizedBox(height: 16),
 
               // Action buttons
               Row(
@@ -539,41 +624,57 @@ class _FolderDetailPageState extends State<FolderDetailPage> {
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Obx(() => GestureDetector(
-                      onTap: wordController.isAdding ? null : () async {
-                        await _addWord();
-                      },
-                      child: Container(
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: wordController.isAdding
-                              ? AppColors.primary.withOpacity(0.5)
-                              : AppColors.primary,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Center(
-                          child: wordController.isAdding
-                              ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation(Colors.white),
-                            ),
-                          )
-                              : Text(
-                            'Add word',
-                            style: GoogleFonts.inter(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
+                    child: Obx(
+                      () => GestureDetector(
+                        onTap: wordController.isAdding
+                            ? null
+                            : () async {
+                                await _addWord();
+                              },
+                        child: Container(
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: wordController.isAdding
+                                ? AppColors.primary.withOpacity(0.5)
+                                : AppColors.primary,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Center(
+                            child: wordController.isAdding
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation(
+                                        Colors.white,
+                                      ),
+                                    ),
+                                  )
+                                : Text(
+                                    'Add word',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                    ),
+                                  ),
                           ),
                         ),
                       ),
-                    )),
+                    ),
                   ),
                 ],
+              ),
+
+
+              const SizedBox(height: 32),
+              Text(
+                "Zehnly can make mistakes. Check important info.",
+                style: GoogleFonts.armata(
+                  fontSize: 11,
+                ),
+                textAlign: TextAlign.center,
               ),
             ],
           ),
@@ -617,12 +718,12 @@ class _FolderDetailPageState extends State<FolderDetailPage> {
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(color: AppColors.primary, width: 2),
             ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 12,
+            ),
           ),
-          style: GoogleFonts.inter(
-            fontSize: 15,
-            color: AppColors.textPrimary,
-          ),
+          style: GoogleFonts.inter(fontSize: 15, color: AppColors.textPrimary),
         ),
       ],
     );
@@ -701,7 +802,10 @@ class _FolderDetailPageState extends State<FolderDetailPage> {
               },
               child: Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 16,
+                ),
                 child: Row(
                   children: [
                     Icon(
@@ -731,7 +835,10 @@ class _FolderDetailPageState extends State<FolderDetailPage> {
               },
               child: Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 16,
+                ),
                 child: Row(
                   children: [
                     const Icon(
@@ -829,35 +936,40 @@ class _FolderDetailPageState extends State<FolderDetailPage> {
                           ),
                         ),
                       ),
-                      Obx(() => GestureDetector(
-                        onTap: wordController.isGeneratingExample
-                            ? null
-                            : () => wordController.generateExampleSentence(),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: wordController.isGeneratingExample
-                              ? SizedBox(
-                            width: 12,
-                            height: 12,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: AppColors.primary,
+                      Obx(
+                        () => GestureDetector(
+                          onTap: wordController.isGeneratingExample
+                              ? null
+                              : () => wordController.generateExampleSentence(),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
                             ),
-                          )
-                              : Text(
-                            'Generate',
-                            style: GoogleFonts.inter(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
-                              color: AppColors.primary,
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(6),
                             ),
+                            child: wordController.isGeneratingExample
+                                ? SizedBox(
+                                    width: 12,
+                                    height: 12,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: AppColors.primary,
+                                    ),
+                                  )
+                                : Text(
+                                    'Generate',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w500,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
                           ),
                         ),
-                      )),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -876,9 +988,15 @@ class _FolderDetailPageState extends State<FolderDetailPage> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: AppColors.primary, width: 2),
+                        borderSide: BorderSide(
+                          color: AppColors.primary,
+                          width: 2,
+                        ),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                     ),
                     style: GoogleFonts.inter(
                       fontSize: 15,
@@ -916,39 +1034,45 @@ class _FolderDetailPageState extends State<FolderDetailPage> {
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Obx(() => GestureDetector(
-                      onTap: wordController.isUpdating ? null : () async {
-                        await _updateWord(word.id);
-                      },
-                      child: Container(
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: wordController.isUpdating
-                              ? AppColors.primary.withOpacity(0.5)
-                              : AppColors.primary,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Center(
-                          child: wordController.isUpdating
-                              ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation(Colors.white),
-                            ),
-                          )
-                              : Text(
-                            'Update word',
-                            style: GoogleFonts.inter(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
+                    child: Obx(
+                      () => GestureDetector(
+                        onTap: wordController.isUpdating
+                            ? null
+                            : () async {
+                                await _updateWord(word.id);
+                              },
+                        child: Container(
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: wordController.isUpdating
+                                ? AppColors.primary.withOpacity(0.5)
+                                : AppColors.primary,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Center(
+                            child: wordController.isUpdating
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation(
+                                        Colors.white,
+                                      ),
+                                    ),
+                                  )
+                                : Text(
+                                    'Update word',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                    ),
+                                  ),
                           ),
                         ),
                       ),
-                    )),
+                    ),
                   ),
                 ],
               ),
@@ -1018,7 +1142,10 @@ class _FolderDetailPageState extends State<FolderDetailPage> {
               },
               child: Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 16,
+                ),
                 child: Row(
                   children: [
                     Icon(
@@ -1048,7 +1175,10 @@ class _FolderDetailPageState extends State<FolderDetailPage> {
                 },
                 child: Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 16,
+                  ),
                   child: Row(
                     children: [
                       Icon(
@@ -1077,7 +1207,10 @@ class _FolderDetailPageState extends State<FolderDetailPage> {
               },
               child: Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 16,
+                ),
                 child: Row(
                   children: [
                     const Icon(

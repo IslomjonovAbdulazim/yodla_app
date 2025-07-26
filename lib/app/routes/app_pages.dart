@@ -1,6 +1,8 @@
 // lib/app/routes/app_pages.dart
 import 'package:get/get.dart';
+import 'package:yodla_app/app/bindings/scan_binding.dart';
 import 'package:yodla_app/app/bindings/splash_binding.dart';
+import 'package:yodla_app/app/views/scan_page.dart';
 
 import '../bindings/auth_binding.dart';
 import '../bindings/home_binding.dart';
@@ -68,6 +70,13 @@ class AppPages {
       name: AppRoutes.folderDetail,
       page: () => const FolderDetailPage(),
       binding: FolderBinding(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+    ),
+    GetPage(
+      name: AppRoutes.scan,
+      page: () => const ScanPage(),
+      binding: ScanBinding(),
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 300),
     ),

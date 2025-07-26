@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../models/api_response_model.dart';
 import '../models/folder_model.dart';
@@ -15,6 +16,10 @@ import '../utils/validators.dart';
 class WordController extends GetxController with FormValidationMixin {
   late ApiService _apiService;
   late CameraService _cameraService;
+  final RxBool _isTranslating = false.obs;
+  final Rx<TranslateWordResponse?> _translationOptions = Rx<TranslateWordResponse?>(null);
+  bool get isTranslating => _isTranslating.value;
+  TranslateWordResponse? get translationOptions => _translationOptions.value;
 
   // Observable states
   final RxBool _isLoading = false.obs;
@@ -371,10 +376,50 @@ class WordController extends GetxController with FormValidationMixin {
         'translation': translation,
       });
 
+      // Debug: Log the request being sent
+      print('=== Generate Example Request ===');
+      print('Endpoint: ${ApiEndpoints.generateExample}');
+      print('Request Data: ${request.toJson()}');
+
       final response = await _apiService.post<GenerateExampleResponse>(
         ApiEndpoints.generateExample,
         data: request.toJson(),
-        fromJson: (json) => GenerateExampleResponse.fromJson(json),
+        fromJson: (json) {
+          // Debug: Log the raw response
+          print('=== Generate Example Raw Response ===');
+          print('Response JSON: $json');
+
+          // Handle different response formats
+          try {
+            return GenerateExampleResponse.fromJson(json);
+          } catch (e) {
+            print('Failed to parse as GenerateExampleResponse: $e');
+
+            // Check if it's an error response
+            if (json is Map<String, dynamic>) {
+              if (json.containsKey('detail')) {
+                // FastAPI error response format
+                final detail = json['detail'];
+                if (detail is List) {
+                  final firstError = detail.isNotEmpty ? detail[0] : {};
+                  final errorMessage = firstError is Map ?
+                  (firstError['msg'] ?? 'Unknown validation error') :
+                  'Validation error occurred';
+                  throw Exception('API Error: $errorMessage');
+                } else if (detail is String) {
+                  throw Exception('API Error: $detail');
+                }
+              }
+
+              if (json.containsKey('error')) {
+                throw Exception('API Error: ${json['error']}');
+              }
+            }
+
+            // Re-throw original error if we can't handle it
+            rethrow;
+          }
+        },
       );
 
       if (response.success && response.data != null) {
@@ -393,12 +438,32 @@ class WordController extends GetxController with FormValidationMixin {
         AppHelpers.logUserAction('generate_example_failed', {
           'word': word,
           'error': response.error,
+          'status_code': response.statusCode,
         });
 
-        AppHelpers.showErrorSnackbar(
-          response.error ?? 'Failed to generate example sentence',
-          title: 'Generation Failed',
-        );
+        // Show specific error messages based on status code
+        String errorMessage;
+        String errorTitle;
+
+        switch (response.statusCode) {
+          case 422:
+            errorMessage = 'Invalid input format. Please check your word and translation.';
+            errorTitle = 'Validation Error';
+            break;
+          case 500:
+            errorMessage = 'Server error while generating example. Please try again.';
+            errorTitle = 'Server Error';
+            break;
+          case 404:
+            errorMessage = 'Generate example service not available.';
+            errorTitle = 'Service Unavailable';
+            break;
+          default:
+            errorMessage = response.error ?? 'Failed to generate example sentence';
+            errorTitle = 'Generation Failed';
+        }
+
+        AppHelpers.showErrorSnackbar(errorMessage, title: errorTitle);
       }
     } catch (e) {
       AppHelpers.logUserAction('generate_example_exception', {
@@ -406,8 +471,22 @@ class WordController extends GetxController with FormValidationMixin {
         'error': e.toString(),
       });
 
+      // Enhanced error handling for different types of exceptions
+      String errorMessage;
+      if (e.toString().contains('API Error:')) {
+        errorMessage = e.toString().replaceFirst('Exception: ', '');
+      } else if (e.toString().contains('SocketException')) {
+        errorMessage = 'Network connection error. Please check your internet connection.';
+      } else if (e.toString().contains('TimeoutException')) {
+        errorMessage = 'Request timeout. Please try again.';
+      } else if (e.toString().contains('FormatException')) {
+        errorMessage = 'Invalid response format from server.';
+      } else {
+        errorMessage = 'An unexpected error occurred while generating example';
+      }
+
       AppHelpers.showErrorSnackbar(
-        'An unexpected error occurred while generating example',
+        errorMessage,
         title: 'Generation Error',
       );
     } finally {
@@ -468,6 +547,103 @@ class WordController extends GetxController with FormValidationMixin {
     } finally {
       _isLoading.value = false;
     }
+  }
+
+  /// Translate word and get options
+  Future<void> translateWord() async {
+    try {
+      if (_isTranslating.value) return;
+
+      final word = wordController.text.trim();
+      if (word.isEmpty) {
+        AppHelpers.showWarningSnackbar(
+          'Please enter an English word first',
+          title: 'Missing Word',
+        );
+        return;
+      }
+
+      _isTranslating.value = true;
+
+      final request = TranslateWordRequest(word: word);
+
+      final response = await _apiService.post<TranslateWordResponse>(
+        ApiEndpoints.translateWord,
+        data: request.toJson(),
+        fromJson: (json) => TranslateWordResponse.fromJson(json),
+      );
+
+      if (response.success && response.data != null) {
+        _translationOptions.value = response.data!;
+        _showTranslationOptionsDialog();
+      } else {
+        AppHelpers.showErrorSnackbar(
+          response.error ?? 'Failed to translate word',
+          title: 'Translation Failed',
+        );
+      }
+    } catch (e) {
+      AppHelpers.showErrorSnackbar(
+        'An error occurred while translating',
+        title: 'Translation Error',
+      );
+    } finally {
+      _isTranslating.value = false;
+    }
+  }
+
+  /// Show translation options dialog
+  void _showTranslationOptionsDialog() {
+    final options = _translationOptions.value?.options ?? [];
+    if (options.isEmpty) return;
+
+    Get.dialog(
+      Dialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Select Translation',
+                style: GoogleFonts.inter(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ...options.map((option) => ListTile(
+                tileColor: Colors.white,
+                title: Text(option.translation),
+                leading: Container(
+                  width: 20,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    color: Color.lerp(
+                      Colors.white,
+                      Colors.green.shade900,
+                      option.confidence,
+                    ),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                onTap: () {
+                  translationController.text = option.translation;
+                  Get.back();
+                },
+              )),
+              const SizedBox(height: 16),
+              TextButton(
+                onPressed: () => Get.back(),
+                child: const Text('Cancel'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   /// Update word

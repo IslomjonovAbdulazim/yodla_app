@@ -17,6 +17,7 @@ abstract class AppRoutes {
   static const String wordDetail = '/word-detail';
   static const String ocrCamera = '/ocr-camera';
   static const String ocrResults = '/ocr-results';
+  static const String scan = '/scan';
 
   // Quiz routes
   static const String quizHome = '/quiz-home';
