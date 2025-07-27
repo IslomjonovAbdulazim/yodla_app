@@ -1,12 +1,20 @@
-// lib/app/widgets/voice_stream_page.dart
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 
 import '../controllers/voice_stream_controller.dart';
 import '../models/voice_stream_model.dart';
 import '../utils/app_colors.dart';
 
+/// A page that displays either a list of available voice agents or, once
+/// connected, an embedded ElevenLabs conversational AI widget. This
+/// implementation adds error handling around the WebView to gracefully
+/// handle cases where the platform WebView may not be registered or
+/// supported. If the WebView fails to initialize, a fallback UI will
+/// prompt the user to open the conversation externally.
 class VoiceStreamPage extends StatelessWidget {
   const VoiceStreamPage({super.key});
 
@@ -18,78 +26,37 @@ class VoiceStreamPage extends StatelessWidget {
         return Scaffold(
           backgroundColor: AppColors.background,
           body: SafeArea(
-            child: Column(
-              children: [
-                // Header with connection status
-                _buildHeader(controller),
-
-                // Agent selection or conversation area
-                Expanded(
-                  child: Obx(() {
-                    // Show conversation only when connected AND agent is selected
-                    if (controller.connectionStateRx.value == VoiceConnectionState.connected &&
-                        controller.currentAgent != null) {
-                      return _buildConversationArea(controller);
-                    } else {
-                      // Always show agent selection when not connected to an agent
-                      return _buildAgentSelection(controller);
-                    }
-                  }),
-                ),
-
-                // Controls (only when connected)
-                Obx(() {
-                  if (controller.connectionStateRx.value == VoiceConnectionState.connected &&
-                      controller.currentAgent != null) {
-                    return _buildControls(controller);
-                  }
-                  return const SizedBox.shrink();
-                }),
-              ],
-            ),
+            child: Obx(() {
+              // Show agent selection when not connected
+              if (controller.connectionStateRx.value !=
+                  VoiceConnectionState.connected) {
+                return _buildAgentSelection(controller);
+              }
+              // Show ElevenLabs widget when connected
+              return _buildElevenLabsWidget(controller);
+            }),
           ),
         );
       },
     );
   }
 
-  Widget _buildHeader(VoiceStreamController controller) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // Back button when connected
-          Obx(() {
-            if (controller.connectionStateRx.value == VoiceConnectionState.connected &&
-                controller.currentAgent != null) {
-              return IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: controller.disconnect,
+  Widget _buildAgentSelection(VoiceStreamController controller) {
+    return Column(
+      children: [
+        // Header
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Icon(
+                Icons.mic,
                 color: AppColors.primary,
-              );
-            }
-            return Icon(
-              Icons.mic,
-              color: AppColors.primary,
-              size: 24,
-            );
-          }),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
+                size: 24,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
                   'Voice Chat',
                   style: GoogleFonts.armata(
                     fontSize: 18,
@@ -97,147 +64,55 @@ class VoiceStreamPage extends StatelessWidget {
                     color: AppColors.textPrimary,
                   ),
                 ),
-                Builder(builder: (a) {
-                  final agent = controller.currentAgent;
-                  return Text(
-                    agent != null ? agent.title : 'Select an agent to start',
-                    style: GoogleFonts.armata(
-                      fontSize: 14,
-                      color: AppColors.textSecondary,
-                    ),
-                  );
-                }),
-              ],
-            ),
-          ),
-          _buildConnectionIndicator(controller),
-          // Options menu only when connected
-          Obx(() {
-            if (controller.connectionStateRx.value == VoiceConnectionState.connected &&
-                controller.currentAgent != null) {
-              return IconButton(
-                icon: const Icon(Icons.more_vert),
-                onPressed: controller.showOptionsMenu,
-              );
-            }
-            return const SizedBox.shrink();
-          }),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildConnectionIndicator(VoiceStreamController controller) {
-    return Obx(() {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          color: _getConnectionColor(controller.connectionStateRx.value).withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: _getConnectionColor(controller.connectionStateRx.value)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(
-                color: _getConnectionColor(controller.connectionStateRx.value),
-                shape: BoxShape.circle,
-              ),
-            ),
-            const SizedBox(width: 6),
-            Text(
-              _getConnectionText(controller.connectionStateRx.value),
-              style: GoogleFonts.armata(
-                fontSize: 12,
-                color: _getConnectionColor(controller.connectionStateRx.value),
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      );
-    });
-  }
-
-  Color _getConnectionColor(VoiceConnectionState state) {
-    switch (state) {
-      case VoiceConnectionState.connected:
-        return Colors.green;
-      case VoiceConnectionState.connecting:
-        return Colors.orange;
-      case VoiceConnectionState.error:
-        return Colors.red;
-      case VoiceConnectionState.disconnected:
-        return Colors.grey;
-    }
-  }
-
-  String _getConnectionText(VoiceConnectionState state) {
-    switch (state) {
-      case VoiceConnectionState.connected:
-        return 'Connected';
-      case VoiceConnectionState.connecting:
-        return 'Connecting...';
-      case VoiceConnectionState.error:
-        return 'Error';
-      case VoiceConnectionState.disconnected:
-        return 'Disconnected';
-    }
-  }
-
-  Widget _buildAgentSelection(VoiceStreamController controller) {
-    return Obx(() {
-      if (controller.isLoading) {
-        return const Center(
-          child: CircularProgressIndicator(),
-        );
-      }
-
-      if (controller.agents.isEmpty) {
-        return Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.voice_over_off,
-                size: 64,
-                color: Colors.grey[400],
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'No voice agents available',
-                style: GoogleFonts.armata(
-                  fontSize: 16,
-                  color: Colors.grey[600],
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextButton(
-                onPressed: controller.refreshAgents,
-                child: Text(
-                  'Refresh',
-                  style: GoogleFonts.armata(
-                    color: AppColors.primary,
-                  ),
-                ),
               ),
             ],
           ),
-        );
-      }
+        ),
 
-      return ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: controller.agents.length,
-        itemBuilder: (context, index) {
-          final agent = controller.agents[index];
-          return _buildAgentCard(agent, controller);
-        },
-      );
-    });
+        // Agent list or loading
+        Expanded(
+          child: Obx(() {
+            if (controller.isLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            if (controller.agents.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.voice_over_off,
+                        size: 64, color: Colors.grey[400]),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No voice agents available',
+                      style: GoogleFonts.armata(
+                          fontSize: 16, color: Colors.grey[600]),
+                    ),
+                    const SizedBox(height: 8),
+                    TextButton(
+                      onPressed: controller.refreshAgents,
+                      child: Text('Refresh',
+                          style: GoogleFonts.armata(
+                              color: AppColors.primary)),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            return ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: controller.agents.length,
+              itemBuilder: (context, index) {
+                final agent = controller.agents[index];
+                return _buildAgentCard(agent, controller);
+              },
+            );
+          }),
+        ),
+      ],
+    );
   }
 
   Widget _buildAgentCard(VoiceAgent agent, VoiceStreamController controller) {
@@ -257,9 +132,7 @@ class VoiceStreamPage extends StatelessWidget {
         ),
         title: Text(
           agent.title,
-          style: GoogleFonts.armata(
-            fontWeight: FontWeight.w600,
-          ),
+          style: GoogleFonts.armata(fontWeight: FontWeight.w600),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -268,9 +141,7 @@ class VoiceStreamPage extends StatelessWidget {
             Text(
               agent.description,
               style: GoogleFonts.armata(
-                fontSize: 13,
-                color: AppColors.textSecondary,
-              ),
+                  fontSize: 13, color: AppColors.textSecondary),
             ),
             const SizedBox(height: 8),
             Container(
@@ -310,231 +181,260 @@ class VoiceStreamPage extends StatelessWidget {
     );
   }
 
-  Widget _buildConversationArea(VoiceStreamController controller) {
-    return Obx(() {
-      if (controller.transcriptsRx.isEmpty) {
-        return Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.waves,
-                size: 64,
-                color: Colors.grey[400],
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Start speaking or type a message',
-                style: GoogleFonts.armata(
-                  fontSize: 16,
-                  color: Colors.grey[600],
-                ),
-              ),
-            ],
-          ),
-        );
-      }
-
-      return ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: controller.transcriptsRx.length,
-        itemBuilder: (context, index) {
-          final transcript = controller.transcriptsRx[index];
-          return _buildTranscriptBubble(transcript, controller);
-        },
-      );
-    });
-  }
-
-  Widget _buildTranscriptBubble(VoiceTranscript transcript, VoiceStreamController controller) {
-    final isUser = transcript.isUser;
-
-    return Align(
-      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: EdgeInsets.only(
-          bottom: 12,
-          left: isUser ? 64 : 0,
-          right: isUser ? 0 : 64,
-        ),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: isUser ? AppColors.primary : Colors.grey[100],
-          borderRadius: BorderRadius.circular(16).copyWith(
-            bottomRight: isUser ? const Radius.circular(4) : null,
-            bottomLeft: !isUser ? const Radius.circular(4) : null,
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              transcript.text,
-              style: GoogleFonts.armata(
-                color: isUser ? Colors.white : AppColors.textPrimary,
-                fontSize: 14,
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              _formatTime(transcript.timestamp),
-              style: GoogleFonts.armata(
-                color: isUser ? Colors.white70 : Colors.grey[500],
-                fontSize: 10,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildControls(VoiceStreamController controller) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 4,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // Recording button
-          _buildRecordingButton(controller),
-
-          // Text input
-          const SizedBox(height: 16),
-          _buildTextInput(controller),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRecordingButton(VoiceStreamController controller) {
-    return Obx(() {
-      return GestureDetector(
-        onLongPressStart: (_) => controller.startRecording(),
-        onLongPressEnd: (_) => controller.stopRecording(),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          width: 80,
-          height: 80,
+  Widget _buildElevenLabsWidget(VoiceStreamController controller) {
+    return Column(
+      children: [
+        // Header with close button
+        Container(
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: _getRecordButtonColor(controller),
-            shape: BoxShape.circle,
+            color: Colors.white,
             boxShadow: [
-              if (controller.isRecordingRx.value)
-                BoxShadow(
-                  color: _getRecordButtonColor(controller).withOpacity(0.4),
-                  blurRadius: 20,
-                  spreadRadius: 5,
-                ),
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.1),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
             ],
           ),
-          child: Stack(
+          child: Row(
             children: [
-              Center(
-                child: Icon(
-                  controller.isRecordingRx.value ? Icons.stop : Icons.mic,
-                  color: Colors.white,
-                  size: 32,
-                ),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: controller.disconnect,
+                color: AppColors.primary,
+                iconSize: 28,
               ),
-              if (controller.isRecordingRx.value)
-                Center(
-                  child: SizedBox(
-                    width: 60,
-                    height: 60,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        Colors.white.withOpacity(0.7),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      controller.currentAgent?.title ?? 'Voice Chat',
+                      style: GoogleFonts.armata(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
                       ),
                     ),
-                  ),
+                    Text(
+                      'ElevenLabs ConvAI Active',
+                      style: GoogleFonts.armata(
+                        fontSize: 14,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
                 ),
+              ),
+              // Connection indicator
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.green),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: Colors.green,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Connected',
+                      style: GoogleFonts.armata(
+                        fontSize: 12,
+                        color: Colors.green,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
-      );
-    });
-  }
 
-  Color _getRecordButtonColor(VoiceStreamController controller) {
-    if (controller.isRecordingRx.value) return Colors.red;
-    if (controller.connectionStateRx.value == VoiceConnectionState.connected &&
-        !controller.isPlayingRx.value) return Colors.blue;
-    return Colors.grey;
-  }
-
-  Widget _buildTextInput(VoiceStreamController controller) {
-    return Row(
-      children: [
+        // ElevenLabs WebView or fallback
         Expanded(
-          child: TextField(
-            controller: controller.messageController,
-            decoration: InputDecoration(
-              hintText: 'Type a message...',
-              hintStyle: GoogleFonts.armata(color: Colors.grey[500]),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(24),
-                borderSide: BorderSide.none,
-              ),
-              filled: true,
-              fillColor: Colors.grey[100],
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 12,
+          child: Container(
+            margin: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: _ElevenLabsWebView(
+                agentId: controller.currentAgent?.agentId ?? '',
               ),
             ),
-            style: GoogleFonts.armata(),
-            onSubmitted: (_) => controller.sendTextMessage(),
           ),
         ),
-        const SizedBox(width: 12),
-        Obx(() {
-          return GestureDetector(
-            onTap: _canSendText(controller) ? controller.sendTextMessage : null,
-            child: Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: _canSendText(controller) ? AppColors.primary : Colors.grey[300],
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.send,
-                color: _canSendText(controller) ? Colors.white : Colors.grey[500],
-                size: 20,
-              ),
-            ),
-          );
-        }),
       ],
     );
   }
+}
 
-  bool _canSendText(VoiceStreamController controller) {
-    return controller.connectionStateRx.value == VoiceConnectionState.connected &&
-        controller.messageController.text.trim().isNotEmpty;
+/// A stateful widget that tries to load the ElevenLabs ConvAI widget inside a
+/// WebView. On some platforms (particularly iOS) the WebView plugin may not
+/// be registered correctly. In that case, we catch the exception and
+/// display a fallback UI instead of crashing the app. The fallback simply
+/// informs the user that the widget failed to load and suggests trying
+/// again later or updating the app.
+class _ElevenLabsWebView extends StatefulWidget {
+  final String agentId;
+
+  const _ElevenLabsWebView({required this.agentId});
+
+  @override
+  State<_ElevenLabsWebView> createState() => _ElevenLabsWebViewState();
+}
+
+class _ElevenLabsWebViewState extends State<_ElevenLabsWebView> {
+  WebViewController? _controller;
+  bool _initializationFailed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeWebView();
   }
 
-  String _formatTime(DateTime timestamp) {
-    final now = DateTime.now();
-    final diff = now.difference(timestamp);
+  /// Initializes the embedded WebView and attempts to load our
+  /// conversational AI widget. The method is asynchronous so that
+  /// exceptions thrown by `loadHtmlString` can be caught. Without awaiting
+  /// the future returned by `loadHtmlString`, platform exceptions
+  /// originating from native code may escape our try/catch and crash the
+  /// app. If initialization fails for any reason, the `_initializationFailed`
+  /// flag is set and a fallback UI will be shown instead of the WebView.
+  Future<void> _initializeWebView() async {
+    // Create HTML content with ElevenLabs ConvAI widget
+    final htmlContent = '''
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            body {
+                margin: 0;
+                padding: 0;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                background: #f8f9fa;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                min-height: 100vh;
+            }
+            .container {
+                text-align: center;
+                background: white;
+                padding: 20px;
+                border-radius: 16px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+                max-width: 400px;
+                width: 100%;
+            }
+            .title {
+                font-size: 20px;
+                font-weight: bold;
+                color: #333;
+                margin-bottom: 10px;
+            }
+            .subtitle {
+                font-size: 14px;
+                color: #666;
+                margin-bottom: 20px;
+            }
+            elevenlabs-convai {
+                width: 100%;
+                height: 300px;
+                border-radius: 12px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="title">Voice Conversation</div>
+            <div class="subtitle">Click the widget below to start talking</div>
+            <!-- ElevenLabs ConvAI Widget -->
+            <elevenlabs-convai agent-id="${widget.agentId}"></elevenlabs-convai>
+            <!-- Load ElevenLabs ConvAI Widget Script -->
+            <script src="https://unpkg.com/@elevenlabs/convai-widget-embed" async type="text/javascript"></script>
+        </div>
+    </body>
+    </html>
+    ''';
 
-    if (diff.inMinutes < 1) {
-      return 'Just now';
-    } else if (diff.inHours < 1) {
-      return '${diff.inMinutes}m ago';
-    } else {
-      return '${timestamp.hour}:${timestamp.minute.toString().padLeft(2, '0')}';
+    try {
+      final controller = WebViewController()
+        ..setJavaScriptMode(JavaScriptMode.unrestricted)
+        ..setNavigationDelegate(
+          NavigationDelegate(
+            onNavigationRequest: (NavigationRequest request) {
+              // Allow all navigation for the widget
+              return NavigationDecision.navigate;
+            },
+          ),
+        );
+      // Await the load operation to catch asynchronous errors thrown
+      // by the native WebView implementation.
+      await controller.loadHtmlString(htmlContent);
+      setState(() {
+        _controller = controller;
+        _initializationFailed = false;
+      });
+    } catch (e) {
+      // If instantiating the controller or loading the HTML fails (e.g. plugin
+      // not registered), mark initialization as failed. The UI will display a
+      // fallback.
+      setState(() {
+        _initializationFailed = true;
+        _controller = null;
+      });
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_initializationFailed || _controller == null) {
+      // When the WebView cannot be created, show a simple fallback message.
+      return Container(
+        color: Colors.white,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 48, color: Colors.red),
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                child: Text(
+                  'Failed to load the voice chat widget. Please ensure the WebView plugin is properly configured or try again later.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.armata(fontSize: 14, color: AppColors.textSecondary),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    return WebViewWidget(controller: _controller!);
   }
 }

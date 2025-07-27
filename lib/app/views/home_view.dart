@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lottie/lottie.dart';
 import 'package:yodla_app/app/views/folders_page.dart';
+import 'package:yodla_app/app/views/scan_page.dart';
 
 import '../controllers/voice_stream_controller.dart';
 import '../utils/app_colors.dart';
@@ -22,12 +23,7 @@ class _HomeViewState extends State<HomeView> {
   late final List<Widget> _pages = [
     const SpeakPage(),
 
-    Center(
-      child: Text(
-        'Create Page',
-        style: GoogleFonts.armata(fontSize: 24, color: Color(0xFF7AB2D3)),
-      ),
-    ),
+    ScanPage(),
 
     FoldersPage(),
   ];

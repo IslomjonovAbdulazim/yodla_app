@@ -1,4 +1,6 @@
 // lib/app/models/voice_stream_model.dart
+
+/// Voice Agent model
 class VoiceAgent {
   final int id;
   final String topic;
@@ -36,40 +38,7 @@ enum VoiceConnectionState {
   error,
 }
 
-/// Voice transcript for display
-class VoiceTranscript {
-  final String id;
-  final String text;
-  final bool isUser;
-  final DateTime timestamp;
-
-  VoiceTranscript({
-    required this.id,
-    required this.text,
-    required this.isUser,
-    required this.timestamp,
-  });
-
-  static VoiceTranscript user(String text) {
-    return VoiceTranscript(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      text: text,
-      isUser: true,
-      timestamp: DateTime.now(),
-    );
-  }
-
-  static VoiceTranscript agent(String text) {
-    return VoiceTranscript(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      text: text,
-      isUser: false,
-      timestamp: DateTime.now(),
-    );
-  }
-}
-
-/// WebSocket Events - ElevenLabs Protocol
+/// WebSocket Events for audio streaming
 class AudioChunkEvent {
   final String audioBase64;
 
@@ -80,24 +49,7 @@ class AudioChunkEvent {
   };
 }
 
-class TextMessageEvent {
-  final String text;
-
-  TextMessageEvent(this.text);
-
-  Map<String, dynamic> toJson() => {
-    'type': 'user_message',
-    'text': text,
-  };
-}
-
-class InterruptionEvent {
-  Map<String, dynamic> toJson() => {
-    'type': 'interruption',
-  };
-}
-
-/// Received Events
+/// Agent audio response event
 class AgentAudioEvent {
   final String audioBase64;
   final int eventId;
@@ -111,30 +63,6 @@ class AgentAudioEvent {
     return AgentAudioEvent(
       audioBase64: json['audio_event']['audio_base_64'] ?? '',
       eventId: json['audio_event']['event_id'] ?? 0,
-    );
-  }
-}
-
-class AgentTextEvent {
-  final String text;
-
-  AgentTextEvent(this.text);
-
-  factory AgentTextEvent.fromJson(Map<String, dynamic> json) {
-    return AgentTextEvent(
-      json['agent_response_event']['agent_response'] ?? '',
-    );
-  }
-}
-
-class UserTranscriptEvent {
-  final String text;
-
-  UserTranscriptEvent(this.text);
-
-  factory UserTranscriptEvent.fromJson(Map<String, dynamic> json) {
-    return UserTranscriptEvent(
-      json['user_transcription_event']['user_transcript'] ?? '',
     );
   }
 }

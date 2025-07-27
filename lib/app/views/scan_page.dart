@@ -15,6 +15,8 @@ class ScanPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    Get.put(ScanController());
+    Get.put(WordController());
     final controller = Get.find<ScanController>();
 
     return CupertinoPageScaffold(

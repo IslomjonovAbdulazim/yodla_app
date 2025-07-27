@@ -82,6 +82,5 @@
     <!-- Add speech recognition if you plan to use it -->
     <key>NSSpeechRecognitionUsageDescription</key>
     <string>Yodla uses speech recognition to convert your voice to text for better conversation experience with AI agents.</string>
-
 </dict>
 </plist>
